@@ -1,6 +1,6 @@
 {
-    "name": "Monochrome Music",
-    "short_name": "Monochrome",
+    "name": "Arostream Music",
+    "short_name": "Arostream",
     "description": "A minimalist music streaming application",
     "start_url": "./",
     "display": "standalone",

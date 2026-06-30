@@ -2574,17 +2574,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     UIRenderer.instance.setupSearchClearButton(searchInput);
 
+    let searchDebounceTimer = null;
+
     const performSearch = (query) => {
-        if (query) {
-            navigate(`/search/${encodeURIComponent(query)}`);
+        if (!query) return;
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = null;
         }
+        const target = `/search/${encodeURIComponent(query)}`;
+        if (window.location.pathname === target) return;
+        navigate(target);
     };
 
-    const debouncedSearch = debounce((query) => {
-        if (query && query === searchInput.value.trim()) {
-            performSearch(query);
-        }
-    }, 3000);
+    const debouncedSearch = (query) => {
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            searchDebounceTimer = null;
+            if (query && query === searchInput.value.trim()) {
+                performSearch(query);
+            }
+        }, 800);
+    };
 
     const handleExternalLink = (query) => {
         const isExternalLink =
@@ -2671,7 +2682,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const router = createRouter(UIRenderer.instance);
 
+    let routeInFlight = false;
+    let routeQueued = false;
+
     const handleRouteChange = async (event) => {
+        if (routeInFlight) {
+            routeQueued = true;
+            return;
+        }
+        routeInFlight = true;
         const overlay = document.getElementById('fullscreen-cover-overlay');
         const isFullscreenOpen = overlay && getComputedStyle(overlay).display === 'flex';
 
@@ -2704,16 +2723,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             modalSettings.closeAllModals();
         }
 
-        await router();
-        if (window.location.pathname.replace(/\/+$/, '') === '/about') {
-            fetchcontributors();
+        try {
+            await router();
+            if (window.location.pathname.replace(/\/+$/, '') === '/about') {
+                fetchcontributors();
+            }
+            updateTabTitle(Player.instance);
+        } finally {
+            routeInFlight = false;
+            if (routeQueued) {
+                routeQueued = false;
+                handleRouteChange();
+            }
         }
-        updateTabTitle(Player.instance);
+    };
+
+    const openFullscreenFromHash = () => {
+        if (window.location.hash !== '#fullscreen') return;
+        const overlay = document.getElementById('fullscreen-cover-overlay');
+        if (!overlay || getComputedStyle(overlay).display !== 'none') return;
+        if (!Player.instance?.currentTrack) return;
+        UIRenderer.instance.showFullscreenCover(
+            Player.instance.currentTrack,
+            Player.instance.getNextTrack(),
+            lyricsManager,
+            Player.instance.activeElement
+        );
     };
 
     await handleRouteChange();
+    openFullscreenFromHash();
 
     window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('hashchange', openFullscreenFromHash);
 
     document.body.addEventListener('click', (e) => {
         const link = e.target.closest('a');
@@ -2990,7 +3032,7 @@ function showUpdateNotification(updateCallback) {
     notification.innerHTML = `
         <div>
             <strong>Update Available</strong>
-            <p>A new version of Monochrome is available.</p>
+            <p>A new version of Arostream is available.</p>
         </div>
         <div class="update-notification-actions">
             <button class="btn-primary" id="update-now-btn">Update Now</button>

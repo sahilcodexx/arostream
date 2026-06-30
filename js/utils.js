@@ -408,6 +408,30 @@ export const getTrackArtists = (track = {}, { fallback = 'Unknown Artist' } = {}
         return track.artists.map((artist) => artist?.name).join(', ');
     }
 
+    if (track?.artist?.name) return track.artist.name;
+
+    return fallback;
+};
+
+/** Performer name(s) for lyrics lookups — avoids JioSaavn composer/actor credit pollution */
+export const getLyricsArtist = (track = {}, { fallback = 'Unknown Artist' } = {}) => {
+    const isYouTube = track?.isYouTube || (typeof track?.id === 'string' && track.id.startsWith('yt:'));
+    if (isYouTube && track?.artist?.name) return track.artist.name;
+
+    const isJio = track?.isJioSaavn || (typeof track?.id === 'string' && track.id.startsWith('j:'));
+    const names = (track?.artists ?? []).map((artist) => artist?.name).filter(Boolean);
+    const uniqueNames = [...new Set(names)];
+    const hasPollutedCredits = names.length > uniqueNames.length || names.length > 3;
+
+    if (isJio || hasPollutedCredits) {
+        if (!hasPollutedCredits && uniqueNames.length > 0) {
+            return uniqueNames.join(', ');
+        }
+        if (track?.artist?.name) return track.artist.name;
+    }
+
+    if (uniqueNames.length) return uniqueNames.join(', ');
+    if (track?.artist?.name) return track.artist.name;
     return fallback;
 };
 

@@ -222,6 +222,7 @@ export class UIRenderer {
         this.player = player;
         this.currentTrack = null;
         this.searchAbortController = null;
+        this._latestSearchQuery = null;
         this.vibrantColorCache = new Map();
         this.visualizer = null;
         this.renderLock = false;
@@ -1419,6 +1420,40 @@ export class UIRenderer {
         }
     }
 
+    _applyFullscreenCoverPreview(track, nextTrack) {
+        const title = document.getElementById('fullscreen-track-title');
+        const artist = document.getElementById('fullscreen-track-artist');
+        const coverImage = document.getElementById('fullscreen-cover-image');
+        const nextTrackEl = document.getElementById('fullscreen-next-track');
+
+        if (title) {
+            title.textContent = track.title || '';
+        }
+        if (artist) {
+            artist.textContent = getTrackArtists(track);
+        }
+        if (coverImage && track.type !== 'video') {
+            const coverUrl = this.api.getCoverUrl(track.album?.cover, '1280');
+            if (coverImage.tagName === 'IMG' && coverUrl) {
+                coverImage.src = coverUrl;
+            }
+        }
+        if (nextTrack) {
+            nextTrackEl?.classList.remove('animate-in');
+            if (nextTrackEl) {
+                void nextTrackEl.offsetWidth;
+                nextTrackEl.classList.add('animate-in');
+                nextTrackEl.style.display = 'flex';
+                nextTrackEl.querySelector('.value').textContent =
+                    `${nextTrack.title} • ${getTrackArtists(nextTrack)}`;
+            }
+        } else if (nextTrackEl) {
+            nextTrackEl.style.display = 'none';
+            nextTrackEl.classList.remove('animate-in');
+        }
+        this.updateFullscreenQualityBadgePlacement(track);
+    }
+
     async showFullscreenCover(track, nextTrack, lyricsManager, activeElement) {
         if (!track) return;
         this.fullscreenVisualizerSuppressed = false;
@@ -1427,7 +1462,6 @@ export class UIRenderer {
         }
         const overlay = document.getElementById('fullscreen-cover-overlay');
         const isAlreadyOpen = overlay && window.getComputedStyle(overlay).display !== 'none';
-        const nextTrackEl = document.getElementById('fullscreen-next-track');
         const lyricsPane = document.getElementById('fullscreen-lyrics-pane');
         const lyricsContent = document.getElementById('fullscreen-lyrics-content');
         const lyricsToggleBtn = document.getElementById('toggle-fullscreen-lyrics-btn');
@@ -1440,36 +1474,7 @@ export class UIRenderer {
         coverCard?.classList.toggle('cd', isCdMode);
         cdRing?.classList.toggle('cd', isCdMode);
 
-        await this.updateFullscreenMetadata(track, nextTrack);
-
-        if (nextTrack) {
-            nextTrackEl.classList.remove('animate-in');
-            void nextTrackEl.offsetWidth;
-            nextTrackEl.classList.add('animate-in');
-        } else {
-            nextTrackEl.classList.remove('animate-in');
-        }
-
-        const canRenderLyrics = Boolean(
-            lyricsManager && activeElement && lyricsPane && lyricsContent && track.type !== 'video'
-        );
-        if (canRenderLyrics) {
-            this.fullscreenLyricsVisible = true;
-            if (lyricsToggleBtn) lyricsToggleBtn.style.removeProperty('display');
-            overlay.classList.remove('lyrics-unavailable');
-            clearFullscreenLyricsSync(lyricsContent);
-            await renderLyricsInFullscreen(track, activeElement, lyricsManager, lyricsContent);
-        } else {
-            this.fullscreenLyricsVisible = false;
-            if (lyricsToggleBtn) lyricsToggleBtn.style.display = 'none';
-            overlay.classList.add('lyrics-unavailable');
-            if (lyricsContent) {
-                clearFullscreenLyricsSync(lyricsContent);
-                lyricsContent.innerHTML =
-                    '<div class="fullscreen-lyrics-empty">Lyrics are not available for this track.</div>';
-            }
-        }
-        this.updateFullscreenLyricsVisibility(overlay);
+        this._applyFullscreenCoverPreview(track, nextTrack);
 
         const playerBar = document.querySelector('.now-playing-bar');
         if (playerBar) playerBar.style.display = 'none';
@@ -1502,13 +1507,35 @@ export class UIRenderer {
             coverImage.vanillaTilt.destroy();
         }
 
-        // Setup UI toggle button
         this.setupUIToggleButton(overlay);
         this.setupControlsAutoHide(overlay);
         this.setupFullscreenSidePanelSync(overlay);
         this.setupFullscreenDismissHandle(overlay);
         this.setupFullscreenLyricsToggle(overlay);
-        await this.refreshFullscreenVisualizerState(activeElement);
+
+        const canRenderLyrics = Boolean(
+            lyricsManager && activeElement && lyricsPane && lyricsContent && track.type !== 'video'
+        );
+        if (canRenderLyrics) {
+            this.fullscreenLyricsVisible = true;
+            if (lyricsToggleBtn) lyricsToggleBtn.style.removeProperty('display');
+            overlay.classList.remove('lyrics-unavailable');
+            clearFullscreenLyricsSync(lyricsContent);
+            void renderLyricsInFullscreen(track, activeElement, lyricsManager, lyricsContent);
+        } else {
+            this.fullscreenLyricsVisible = false;
+            if (lyricsToggleBtn) lyricsToggleBtn.style.display = 'none';
+            overlay.classList.add('lyrics-unavailable');
+            if (lyricsContent) {
+                clearFullscreenLyricsSync(lyricsContent);
+                lyricsContent.innerHTML =
+                    '<div class="fullscreen-lyrics-empty">Lyrics are not available for this track.</div>';
+            }
+        }
+        this.updateFullscreenLyricsVisibility(overlay);
+
+        void this.updateFullscreenMetadata(track, nextTrack);
+        void this.refreshFullscreenVisualizerState(activeElement, { deferStart: true });
     }
 
     updateFullscreenLyricsVisibility(overlay = document.getElementById('fullscreen-cover-overlay')) {
@@ -1775,12 +1802,13 @@ export class UIRenderer {
         });
     }
 
-    async refreshFullscreenVisualizerState(activeElement, { closeOnCancel = false } = {}) {
+    async refreshFullscreenVisualizerState(activeElement, { closeOnCancel = false, deferStart = false } = {}) {
         const overlay = document.getElementById('fullscreen-cover-overlay');
         const visualizerBtn = document.getElementById('fs-visualizer-btn');
         const toggleBtn = document.getElementById('toggle-ui-btn');
         const isVideoTrack = this.player?.currentTrack?.type === 'video';
-        const enabled = !isVideoTrack && visualizerSettings.isEnabled() && !this.fullscreenVisualizerSuppressed;
+        const enabled =
+            !deferStart && !isVideoTrack && visualizerSettings.isEnabled() && !this.fullscreenVisualizerSuppressed;
 
         if (!overlay) return;
 
@@ -3728,38 +3756,43 @@ export class UIRenderer {
     }
 
     async getSeeds() {
-        try {
-            const { smartRecommendations } = await import('./smart-recommendations.js');
-            const { autoplaySettings } = await import('./storage.js');
-            if (autoplaySettings.isSmartRecsEnabled()) {
-                const smartSeeds = await smartRecommendations.getSmartSeeds(50);
-                if (smartSeeds.length > 0) return smartSeeds;
-            }
-        } catch (e) {
-            console.warn('Smart seeds failed, using basic seeds:', e);
-        }
-
         const history = await db.getHistory();
         const favorites = await db.getFavorites('track');
-        const playlists = await db.getPlaylists(true);
-        const playlistTracks = playlists.flatMap((p) => p.tracks || []);
-
-        const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-
-        const combined = [
-            ...shuffle(playlistTracks).slice(0, 20),
-            ...shuffle(favorites).slice(0, 20),
-            ...shuffle(history).slice(0, 10),
-        ];
-
         const seenIds = new Set();
-        const seeds = combined.filter((t) => {
-            if (seenIds.has(t.id)) return false;
-            seenIds.add(t.id);
-            return true;
-        });
+        const seeds = [];
 
-        return shuffle(seeds);
+        const add = (track) => {
+            if (!track?.id || seenIds.has(track.id)) return;
+            seenIds.add(track.id);
+            seeds.push(track);
+        };
+
+        if (this.player?.currentTrack) {
+            add(this.player.currentTrack);
+        }
+
+        for (const track of history.slice(0, 20)) {
+            add(track);
+        }
+
+        for (const track of favorites.slice(0, 10)) {
+            add(track);
+        }
+
+        if (seeds.length < 5) {
+            try {
+                const { smartRecommendations } = await import('./smart-recommendations.js');
+                const { autoplaySettings } = await import('./storage.js');
+                if (autoplaySettings.isSmartRecsEnabled()) {
+                    const smartSeeds = await smartRecommendations.getSmartSeeds(20);
+                    for (const track of smartSeeds) add(track);
+                }
+            } catch (e) {
+                console.warn('Smart seeds fallback failed:', e);
+            }
+        }
+
+        return seeds;
     }
 
     async renderHomeSongs(forceRefresh = false, providedSeeds = null) {
@@ -3845,34 +3878,43 @@ export class UIRenderer {
 
             try {
                 const seeds = providedSeeds || (await this.getSeeds());
-                const albumSeed = seeds.find((t) => t.album && t.album.id);
-                if (albumSeed) {
-                    const similarAlbums = await this.api.getSimilarAlbums(albumSeed.album.id);
-                    const filteredAlbums = await this.filterUserContent(similarAlbums, 'album');
+                const albumSeed = seeds.find((t) => t.album?.id?.startsWith?.('j:'));
+                const artistName =
+                    seeds[0]?.artist?.name || seeds[0]?.artists?.[0]?.name || albumSeed?.artist?.name;
 
-                    if (filteredAlbums.length > 0) {
-                        albumsContainer.innerHTML = filteredAlbums
-                            .slice(0, 12)
-                            .map((a) => this.createAlbumCardHTML(a))
-                            .join('');
-                        for (const a of filteredAlbums.slice(0, 12)) {
-                            const el = albumsContainer.querySelector(`[data-album-id="${a.id}"]`);
-                            if (el) {
-                                trackDataStore.set(el, a);
-                                await this.updateLikeState(el, 'album', a.id);
-                            }
+                let filteredAlbums = [];
+
+                if (albumSeed?.album?.id) {
+                    filteredAlbums = await this.filterUserContent(
+                        await this.api.getSimilarAlbums(albumSeed.album.id),
+                        'album'
+                    );
+                }
+
+                if (!filteredAlbums.length && artistName) {
+                    filteredAlbums = await this.filterUserContent(
+                        await this.api.getAlbumsForArtistName(artistName),
+                        'album'
+                    );
+                }
+
+                if (filteredAlbums.length > 0) {
+                    albumsContainer.innerHTML = filteredAlbums
+                        .slice(0, 12)
+                        .map((a) => this.createAlbumCardHTML(a))
+                        .join('');
+                    for (const a of filteredAlbums.slice(0, 12)) {
+                        const el = albumsContainer.querySelector(`[data-album-id="${a.id}"]`);
+                        if (el) {
+                            trackDataStore.set(el, a);
+                            await this.updateLikeState(el, 'album', a.id);
                         }
-                    } else if (retryCount < 2) {
-                        await new Promise((resolve) => setTimeout(resolve, 1500));
-                        return this.renderHomeAlbums(forceRefresh, null, retryCount + 1);
-                    } else {
-                        albumsContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem 0;">${createPlaceholder('Tell us more about what you like so we can recommend albums!')}</div>`;
                     }
                 } else if (retryCount < 2) {
                     await new Promise((resolve) => setTimeout(resolve, 1500));
                     return this.renderHomeAlbums(forceRefresh, null, retryCount + 1);
                 } else {
-                    albumsContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem 0;">${createPlaceholder('Tell us more about what you like so we can recommend albums!')}</div>`;
+                    albumsContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem 0;">${createPlaceholder('Listen to a few more songs so we can recommend albums.')}</div>`;
                 }
             } catch (e) {
                 console.error(e);
@@ -3892,12 +3934,14 @@ export class UIRenderer {
         const likeType = track.type === 'video' ? 'video' : 'track';
         const yearDisplay = getTrackYearDisplay(track);
 
+        const sourceLabel = track.isYouTube || track.id?.startsWith?.('yt:') ? ' · YouTube' : '';
+
         return this.createBaseCardHTML({
             type: 'track',
             id: track.id,
             href: `/track/${track.id}`,
             title: `${escapeHtml(getTrackTitle(track))} ${explicitBadge} ${qualityBadge}`,
-            subtitle: `${escapeHtml(getTrackArtists(track))}${yearDisplay}`,
+            subtitle: `${escapeHtml(getTrackArtists(track))}${yearDisplay}${sourceLabel}`,
             imageHTML: this.getCoverHTML(
                 track.album?.cover,
                 escapeHtml(track.title),
@@ -4131,10 +4175,16 @@ export class UIRenderer {
 
             try {
                 const seeds = providedSeeds || (await this.getSeeds());
-                const artistSeed = seeds.find((t) => (t.artist && t.artist.id) || (t.artists && t.artists.length > 0));
-                const artistId = artistSeed ? artistSeed.artist?.id || artistSeed.artists?.[0]?.id : null;
+                const artistSeed = seeds[0] || seeds.find((t) => t.artist?.name || t.artists?.length);
+                let artistId = artistSeed?.artist?.id || artistSeed?.artists?.[0]?.id || null;
+                const artistName = artistSeed?.artist?.name || artistSeed?.artists?.[0]?.name;
 
-                if (artistId) {
+                if ((!artistId || artistId.startsWith('yt:')) && artistName) {
+                    const resolved = await this.api.resolveArtistByName(artistName);
+                    if (resolved?.id) artistId = resolved.id;
+                }
+
+                if (artistId && artistId.startsWith('j:')) {
                     const similarArtists = await this.api.getSimilarArtists(artistId);
                     const filteredArtists = await this.filterUserContent(similarArtists, 'artist');
 
@@ -4153,9 +4203,42 @@ export class UIRenderer {
                     } else {
                         artistsContainer.innerHTML = createPlaceholder('No artist recommendations found.');
                     }
+                } else if (artistName) {
+                    let similarArtists = await this.filterUserContent(
+                        await this.api.getRelatedArtistsForName(artistName),
+                        'artist'
+                    );
+
+                    if (!similarArtists.length) {
+                        const seenNames = new Set([artistName.toLowerCase()]);
+                        similarArtists = [];
+                        for (const seed of seeds.slice(1, 15)) {
+                            const name = seed.artist?.name || seed.artists?.[0]?.name;
+                            if (!name || seenNames.has(name.toLowerCase())) continue;
+                            seenNames.add(name.toLowerCase());
+                            similarArtists.push({
+                                id: seed.artist?.id || seed.artists?.[0]?.id || `seed:${name}`,
+                                name,
+                                picture: seed.album?.cover || seed.cover,
+                                cover: seed.album?.cover || seed.cover,
+                                image: seed.album?.cover || seed.cover,
+                                type: 'artist',
+                            });
+                            if (similarArtists.length >= 12) break;
+                        }
+                    }
+
+                    if (similarArtists.length) {
+                        artistsContainer.innerHTML = similarArtists
+                            .slice(0, 12)
+                            .map((a) => this.createArtistCardHTML(a))
+                            .join('');
+                    } else {
+                        artistsContainer.innerHTML = createPlaceholder('No artist recommendations found.');
+                    }
                 } else {
                     artistsContainer.innerHTML = createPlaceholder(
-                        'Listen to more music to get artist recommendations.'
+                        'Listen to a few songs so we can recommend artists.'
                     );
                 }
             } catch (e) {
@@ -4185,7 +4268,6 @@ export class UIRenderer {
                 items.push(...recents.playlists.slice(0, 4).map((i) => ({ ...i, _kind: 'playlist' })));
             if (recents.mixes) items.push(...recents.mixes.slice(0, 4).map((i) => ({ ...i, _kind: 'mix' })));
 
-            items.sort(() => Math.random() - 0.5);
             const displayItems = items.slice(0, 6);
 
             if (displayItems.length > 0) {
@@ -4380,9 +4462,81 @@ export class UIRenderer {
         }
     }
 
+    _isActiveSearch(query) {
+        return this._latestSearchQuery === query;
+    }
+
+    _buildSearchState(query, results = {}) {
+        let finalTracks = (results.tracks && results.tracks.items) || [];
+        let finalVideos = (results.videos && results.videos.items) || [];
+        let finalArtists = (results.artists && results.artists.items) || [];
+        let finalAlbums = (results.albums && results.albums.items) || [];
+        let finalPlaylists = (results.playlists && results.playlists.items) || [];
+
+        if (finalArtists.length === 0 && finalTracks.length > 0) {
+            const artistMap = new Map();
+            finalTracks.forEach((track) => {
+                if (track.artist && !artistMap.has(track.artist.id)) {
+                    artistMap.set(track.artist.id, track.artist);
+                }
+                if (track.artists) {
+                    track.artists.forEach((artist) => {
+                        if (!artistMap.has(artist.id)) {
+                            artistMap.set(artist.id, artist);
+                        }
+                    });
+                }
+            });
+            finalArtists = Array.from(artistMap.values());
+        }
+
+        if (finalAlbums.length === 0 && finalTracks.length > 0) {
+            const albumMap = new Map();
+            finalTracks.forEach((track) => {
+                if (track.album && !albumMap.has(track.album.id)) {
+                    albumMap.set(track.album.id, track.album);
+                }
+            });
+            finalAlbums = Array.from(albumMap.values());
+        }
+
+        finalTracks = finalTracks.filter((t) => !_isBlockedCopyright(t.copyright));
+        finalVideos = finalVideos.filter((t) => !_isBlockedCopyright(t.copyright));
+        finalAlbums = finalAlbums.filter((t) => !_isBlockedCopyright(t.copyright));
+
+        return {
+            query,
+            tracks: finalTracks,
+            videos: finalVideos,
+            artists: finalArtists,
+            albums: finalAlbums,
+            playlists: finalPlaylists,
+            artistsEnriched: false,
+            rendered: {},
+        };
+    }
+
     async renderSearchPage(query) {
+        if (!query?.trim()) {
+            const params = new URLSearchParams(window.location.search);
+            query = params.get('q') || params.get('query') || '';
+        }
+        if (!query?.trim()) return;
+
+        const cleanPath = `/search/${encodeURIComponent(query)}`;
+        if (window.location.pathname === '/search' || window.location.search) {
+            window.history.replaceState({}, '', cleanPath);
+        }
+
+        this._latestSearchQuery = query;
+
         await this.showPage('search');
         document.getElementById('search-results-title').textContent = `Search Results for "${query}"`;
+
+        const searchInput = document.getElementById('search-input');
+        if (searchInput && searchInput.value.trim() !== query) {
+            searchInput.value = query;
+        }
 
         const tracksContainer = document.getElementById('search-tracks-container');
         const artistsContainer = document.getElementById('search-artists-container');
@@ -4390,83 +4544,42 @@ export class UIRenderer {
         const playlistsContainer = document.getElementById('search-playlists-container');
         const podcastsContainer = document.getElementById('search-podcasts-container');
 
-        tracksContainer.innerHTML = this.createSkeletonTracks(8, true);
-        artistsContainer.innerHTML = this.createSkeletonCards(6, true);
-        albumsContainer.innerHTML = this.createSkeletonCards(6, false);
-        playlistsContainer.innerHTML = this.createSkeletonCards(6, false);
-        podcastsContainer.innerHTML = this.createSkeletonCards(6, true);
+        if (!tracksContainer) return;
 
-        if (this.searchAbortController) {
-            this.searchAbortController.abort();
-        }
-        this.searchAbortController = new AbortController();
-        const signal = this.searchAbortController.signal;
+        tracksContainer.innerHTML = this.createSkeletonTracks(8, true);
+        if (artistsContainer) artistsContainer.innerHTML = this.createSkeletonCards(6, true);
+        if (albumsContainer) albumsContainer.innerHTML = this.createSkeletonCards(6, false);
+        if (playlistsContainer) playlistsContainer.innerHTML = this.createSkeletonCards(6, false);
+        if (podcastsContainer) podcastsContainer.innerHTML = this.createSkeletonCards(6, true);
 
         this.setupSearchTabsLazyLoad();
 
         try {
-            const provider = this.api.getCurrentProvider();
-            const results = await this.api.search(query, { signal, provider, enrichArtists: false });
+            const [trackResult, albumResult] = await Promise.all([
+                this.api.searchTracks(query),
+                this.api.searchAlbums(query).catch(() => ({ items: [], total: 0 })),
+            ]);
+            if (!this._isActiveSearch(query)) return;
 
-            let finalTracks = (results.tracks && results.tracks.items) || [];
-            let finalVideos = (results.videos && results.videos.items) || [];
-            let finalArtists = (results.artists && results.artists.items) || [];
-            let finalAlbums = (results.albums && results.albums.items) || [];
-            let finalPlaylists = (results.playlists && results.playlists.items) || [];
-
-            if (finalArtists.length === 0 && finalTracks.length > 0) {
-                const artistMap = new Map();
-                finalTracks.forEach((track) => {
-                    if (track.artist && !artistMap.has(track.artist.id)) {
-                        artistMap.set(track.artist.id, track.artist);
-                    }
-                    if (track.artists) {
-                        track.artists.forEach((artist) => {
-                            if (!artistMap.has(artist.id)) {
-                                artistMap.set(artist.id, artist);
-                            }
-                        });
-                    }
-                });
-                finalArtists = Array.from(artistMap.values());
-            }
-
-            if (finalAlbums.length === 0 && finalTracks.length > 0) {
-                const albumMap = new Map();
-                finalTracks.forEach((track) => {
-                    if (track.album && !albumMap.has(track.album.id)) {
-                        albumMap.set(track.album.id, track.album);
-                    }
-                });
-                finalAlbums = Array.from(albumMap.values());
-            }
-
-            finalTracks = finalTracks.filter((t) => !_isBlockedCopyright(t.copyright));
-            finalVideos = finalVideos.filter((t) => !_isBlockedCopyright(t.copyright));
-            finalAlbums = finalAlbums.filter((t) => !_isBlockedCopyright(t.copyright));
-
-            this._searchState = {
-                query,
-                tracks: finalTracks,
-                videos: finalVideos,
-                artists: finalArtists,
-                albums: finalAlbums,
-                playlists: finalPlaylists,
-                artistsEnriched: false,
-                rendered: {},
-            };
-
-            const activeTab = document.querySelector('#page-search .search-tab.active')?.dataset.tab || 'tracks';
-            await this.renderSearchTab(activeTab);
+            this._searchState = this._buildSearchState(query, {
+                tracks: trackResult,
+                albums: albumResult,
+            });
+            await this._renderSearchTracks(this._searchState);
+            await Promise.all([
+                this._renderSearchAlbums(this._searchState),
+                this._renderSearchArtists(this._searchState),
+                this._renderSearchPlaylists(this._searchState),
+            ]);
         } catch (error) {
-            if (error.name === 'AbortError') return;
+            if (!this._isActiveSearch(query)) return;
             console.error('Search failed:', error);
             const errorMsg = createPlaceholder(`Error during search. ${error.message}`);
             tracksContainer.innerHTML = errorMsg;
-            artistsContainer.innerHTML = errorMsg;
-            albumsContainer.innerHTML = errorMsg;
-            playlistsContainer.innerHTML = errorMsg;
-            podcastsContainer.innerHTML = errorMsg;
+            if (artistsContainer) artistsContainer.innerHTML = errorMsg;
+            if (albumsContainer) albumsContainer.innerHTML = errorMsg;
+            if (playlistsContainer) playlistsContainer.innerHTML = errorMsg;
+            if (podcastsContainer) podcastsContainer.innerHTML = errorMsg;
         }
     }
 
@@ -4476,14 +4589,15 @@ export class UIRenderer {
         page.dataset.lazyBound = 'true';
         page.querySelectorAll('.search-tab').forEach((tab) => {
             tab.addEventListener('click', () => {
-                this.renderSearchTab(tab.dataset.tab);
+                this.renderSearchTab(tab.dataset.tab, true);
             });
         });
     }
 
-    async renderSearchTab(tabName) {
+    async renderSearchTab(tabName, force = false) {
         const state = this._searchState;
-        if (!state || state.rendered[tabName]) return;
+        if (!state) return;
+        if (!force && state.rendered[tabName]) return;
         state.rendered[tabName] = true;
 
         switch (tabName) {
@@ -4507,10 +4621,16 @@ export class UIRenderer {
 
     async _renderSearchTracks(state) {
         const tracksContainer = document.getElementById('search-tracks-container');
-        if (state.tracks.length) {
-            await this.renderListWithTracks(tracksContainer, state.tracks, true, false, false, true);
-        } else {
-            tracksContainer.innerHTML = createPlaceholder('No tracks found.');
+        if (!tracksContainer) return;
+        try {
+            if (state.tracks.length) {
+                await this.renderListWithTracks(tracksContainer, state.tracks, true, false, false, true);
+            } else {
+                tracksContainer.innerHTML = createPlaceholder('No tracks found.');
+            }
+        } catch (err) {
+            console.error('Failed to render search tracks:', err);
+            tracksContainer.innerHTML = createPlaceholder(`Failed to display tracks. ${err.message}`);
         }
     }
 
@@ -4531,10 +4651,19 @@ export class UIRenderer {
     async _renderSearchArtists(state) {
         const artistsContainer = document.getElementById('search-artists-container');
         if (!state.artistsEnriched && state.artists.length) {
-            try {
-                state.artists = await this.api.tidalAPI.enrichArtistsWithPicture(state.artists);
-            } catch (e) {
-                console.warn('Artist enrichment failed:', e);
+            const tidalArtists = state.artists.filter(
+                (a) => a?.id && !String(a.id).startsWith('j:') && !String(a.id).startsWith('yt:')
+            );
+            if (tidalArtists.length) {
+                try {
+                    const enriched = await this.api.tidalAPI.enrichArtistsWithPicture(tidalArtists);
+                    const pictureMap = new Map(enriched.map((a) => [a.id, a.picture]));
+                    state.artists = state.artists.map((a) =>
+                        pictureMap.has(a.id) ? { ...a, picture: pictureMap.get(a.id) } : a
+                    );
+                } catch (e) {
+                    console.warn('Artist enrichment failed:', e);
+                }
             }
             state.artistsEnriched = true;
         }
@@ -5376,7 +5505,7 @@ export class UIRenderer {
                     numberOfTracks: playlistData.tracks ? playlistData.tracks.length : 0,
                     isUserPlaylist: true,
                 });
-                document.title = `${playlistData.name || playlistData.title} - Monochrome`;
+                document.title = `${playlistData.name || playlistData.title} - Arostream`;
 
                 // Setup playlist search
                 this.setupTracklistSearch();
@@ -7185,7 +7314,7 @@ export class UIRenderer {
             trendingContainer.innerHTML = createPlaceholder('Failed to load trending podcasts.');
         }
 
-        document.title = 'Podcasts - Monochrome Music';
+        document.title = 'Podcasts - Arostream';
     }
 
     cleanupPodcastState() {
@@ -7231,7 +7360,7 @@ export class UIRenderer {
                 this.podcastState.podcastTitle = 'Unknown Podcast';
             }
 
-            document.title = `${podcastResult?.title || 'Podcast'} - Monochrome Music`;
+            document.title = `${podcastResult?.title || 'Podcast'} - Arostream`;
 
             episodesContainer.innerHTML = '';
             await this.loadAllPodcastEpisodes();

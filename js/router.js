@@ -46,9 +46,15 @@ export function createRouter(ui) {
             case 'party':
                 await ui.renderPartyDetailPage(param);
                 break;
-            case 'search':
-                await ui.renderSearchPage(decodeURIComponent(param));
+            case 'search': {
+                let searchQuery = decodeURIComponent(param || '');
+                if (!searchQuery.trim()) {
+                    const params = new URLSearchParams(window.location.search);
+                    searchQuery = params.get('q') || params.get('query') || '';
+                }
+                await ui.renderSearchPage(searchQuery);
                 break;
+            }
             case 'album': {
                 const { provider, id } = extractProviderAndId(param);
                 await ui.renderAlbumPage(id, provider);
@@ -143,6 +149,6 @@ export function updateTabTitle(player) {
         if (path.startsWith('/album/') || path.startsWith('/playlist/') || path.startsWith('/track/')) {
             return;
         }
-        document.title = 'Monochrome Music';
+        document.title = 'Arostream Music';
     }
 }

@@ -69,6 +69,22 @@ export default defineConfig(({ mode }) => {
                 // host: true,
                 // allowedHosts: ['<your_tailscale_hostname>'], // e.g. pi5.tailf5f622.ts.net
             },
+            proxy: {
+                '/yt-api': {
+                    target: 'http://127.0.0.1:8787',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/yt-api/, ''),
+                    timeout: 120000,
+                    proxyTimeout: 120000,
+                },
+                '/saavn-api': {
+                    target: 'https://jiosavan-api2.vercel.app/api',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/saavn-api\/?/, '/'),
+                    timeout: 30000,
+                    proxyTimeout: 30000,
+                },
+            },
         },
         // preview: {
         //     host: true,
@@ -93,7 +109,7 @@ export default defineConfig(({ mode }) => {
             VitePWA({
                 registerType: 'prompt',
                 devOptions: {
-                    enabled: true,
+                    enabled: false,
                     type: 'classic',
                     disableRuntimeConfig: true,
                     suppressWarnings: true,

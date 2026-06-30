@@ -1,5 +1,6 @@
 //js/lyrics.js
-import { getTrackTitle, getTrackArtists, buildTrackFilename } from './utils.js';
+import { getTrackTitle, getTrackArtists, getLyricsArtist, buildTrackFilename } from './utils.js';
+import { MusicAPI } from './music-api.js';
 import {
     SVG_CLOSE,
     SVG_GENIUS_ACTIVE,
@@ -136,7 +137,7 @@ class GeniusManager {
 
         try {
             this.loading = true;
-            const artist = Array.isArray(track.artists) ? track.artists[0].name : track.artist.name;
+            const artist = getLyricsArtist(track);
             const song = await this.searchTrack(track.title, artist);
 
             if (!song) {
@@ -304,7 +305,16 @@ export class LyricsManager {
             if (!window._originalFetch) {
                 window._originalFetch = window.fetch;
                 window.fetch = async (url, options) => {
-                    const urlStr = url instanceof URL ? url.toString() : url.url;
+                    let urlStr = '';
+                    if (typeof url === 'string') {
+                        urlStr = url;
+                    } else if (url instanceof URL) {
+                        urlStr = url.toString();
+                    } else if (url instanceof Request) {
+                        urlStr = url.url;
+                    } else {
+                        urlStr = String(url ?? '');
+                    }
                     if (urlStr.includes('/dict/') && urlStr.includes('.dat.gz')) {
                         const filename = urlStr.split('/').pop();
                         const cdnUrl = `https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/${filename}`;
@@ -454,9 +464,7 @@ export class LyricsManager {
             }
 
             try {
-                const artist = Array.isArray(track.artists)
-                    ? track.artists.map((a) => a.name || a).join(', ')
-                    : track.artist?.name || '';
+                const artist = getLyricsArtist(track);
                 const title = track.title || '';
                 const album = track.album?.title || '';
                 const duration = track.duration ? Math.round(track.duration) : null;
@@ -1090,18 +1098,43 @@ function applyFullscreenLyricsShadowTweaks(amLyrics, container) {
     requestAnimationFrame(tryInject);
 }
 
-async function renderLyricsComponent(container, track, audioPlayer, lyricsManager) {
+async function refreshJioSaavnTrackMetadata(track) {
+    if (!track?.id?.startsWith?.('j:')) return track;
+    try {
+        const fresh = await MusicAPI.instance.getTrackMetadata(track.id);
+        if (fresh) {
+            track.artist = fresh.artist;
+            track.artists = fresh.artists;
+            track.album = { ...track.album, ...fresh.album };
+            track.title = fresh.title ?? track.title;
+            track.duration = fresh.duration ?? track.duration;
+            track.isJioSaavn = true;
+        }
+    } catch (e) {
+        console.warn('JioSaavn lyrics metadata refresh failed', e);
+    }
+    return track;
+}
+
+async function renderLyricsComponent(container, track, audioPlayer, lyricsManager, options = {}) {
+    const nonBlocking = options.nonBlocking === true;
     container.innerHTML = '<div class="lyrics-loading">Loading lyrics...</div>';
 
     try {
         await lyricsManager.ensureComponentLoaded();
+        const metadataPromise = refreshJioSaavnTrackMetadata(track);
+        if (!nonBlocking) {
+            await metadataPromise;
+        } else {
+            metadataPromise.catch((e) => console.warn('Lyrics metadata refresh failed', e));
+        }
 
         // Set initial Romaji mode
         lyricsManager.isRomajiMode = lyricsManager.getRomajiMode();
         lyricsManager.currentTrackId = track.id;
 
         const title = getTrackTitle(track);
-        const artist = getTrackArtists(track);
+        const artist = getLyricsArtist(track);
         const album = track.album?.title;
         const durationMs = track.duration ? Math.round(track.duration * 1000) : undefined;
         const isrc = (track.isrc || track.mediaMetadata?.isrc || track.audioQuality?.isrc || '').trim();
@@ -1137,9 +1170,15 @@ async function renderLyricsComponent(container, track, audioPlayer, lyricsManage
 
         lyricsManager.setupLyricsObserver(amLyrics);
 
-        // If Romaji mode is enabled and track has Asian text, ensure Kuroshiro is ready
-        if (lyricsManager.isRomajiMode && trackHasAsianText(track) && !lyricsManager.kuroshiroLoaded) {
-            await lyricsManager.loadKuroshiro();
+        const loadKuroshiroIfNeeded = async () => {
+            if (lyricsManager.isRomajiMode && trackHasAsianText(track) && !lyricsManager.kuroshiroLoaded) {
+                await lyricsManager.loadKuroshiro();
+            }
+        };
+        if (nonBlocking) {
+            loadKuroshiroIfNeeded().catch((e) => console.warn('Kuroshiro load failed', e));
+        } else {
+            await loadKuroshiroIfNeeded();
         }
 
         lyricsManager
@@ -1189,24 +1228,32 @@ async function renderLyricsComponent(container, track, audioPlayer, lyricsManage
             });
         };
 
-        await waitForLyrics();
-
-        // Convert immediately after lyrics detected
-        if (lyricsManager.isRomajiMode) {
-            await lyricsManager.convertLyricsContent(amLyrics);
-            // One retry after 500ms in case more lyrics load
-            setTimeout(() => lyricsManager.convertLyricsContent(amLyrics), 500);
-        }
-
-        if (lyricsManager.isGeniusMode && lyricsManager.currentGeniusData) {
-            lyricsManager.applyGeniusAnnotations(amLyrics, lyricsManager.currentGeniusData.referents);
-        }
-
         const cleanup = setupSync(track, audioPlayer, amLyrics, lyricsManager);
-
-        // Attach cleanup to container for easy access
         container.lyricsCleanup = cleanup;
         container.lyricsManager = lyricsManager;
+
+        const finalizeLyrics = async () => {
+            if (!nonBlocking) {
+                await waitForLyrics();
+            } else {
+                waitForLyrics().catch(() => {});
+            }
+
+            if (lyricsManager.isRomajiMode) {
+                await lyricsManager.convertLyricsContent(amLyrics);
+                setTimeout(() => lyricsManager.convertLyricsContent(amLyrics), 500);
+            }
+
+            if (lyricsManager.isGeniusMode && lyricsManager.currentGeniusData) {
+                lyricsManager.applyGeniusAnnotations(amLyrics, lyricsManager.currentGeniusData.referents);
+            }
+        };
+
+        if (nonBlocking) {
+            finalizeLyrics().catch((e) => console.warn('Lyrics finalize failed', e));
+        } else {
+            await finalizeLyrics();
+        }
 
         return amLyrics;
     } catch (error) {
@@ -1354,7 +1401,7 @@ function showGeniusAnnotations(annotations, lineText) {
 }
 
 export async function renderLyricsInFullscreen(track, audioPlayer, lyricsManager, container) {
-    return renderLyricsComponent(container, track, audioPlayer, lyricsManager);
+    return renderLyricsComponent(container, track, audioPlayer, lyricsManager, { nonBlocking: true });
 }
 
 export function clearFullscreenLyricsSync(container) {

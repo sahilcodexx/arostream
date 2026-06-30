@@ -186,7 +186,6 @@ export class Player {
                     bufferingGoal: 30,
                     rebufferingGoal: 2,
                     bufferBehind: 30,
-                    jumpLargeGaps: true,
                 },
                 abr: {
                     enabled: true,
@@ -1049,6 +1048,30 @@ export class Player {
         }
 
         const track = currentQueue[this.currentQueueIndex];
+
+        if (typeof track.id === 'string' && track.id.startsWith('j:')) {
+            try {
+                const fresh = await this.api.getTrackMetadata(track.id);
+                if (fresh) {
+                    Object.assign(track, {
+                        artist: fresh.artist,
+                        artists: fresh.artists,
+                        album: { ...track.album, ...fresh.album },
+                        title: fresh.title ?? track.title,
+                        duration: fresh.duration ?? track.duration,
+                        cover: fresh.cover ?? track.cover,
+                        isJioSaavn: true,
+                    });
+                    currentQueue[this.currentQueueIndex] = track;
+                    if (this.shuffleActive) {
+                        this.shuffledQueue[this.currentQueueIndex] = track;
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to refresh JioSaavn track metadata', e);
+            }
+        }
+
         if (track.isUnavailable) {
             console.warn(`Attempted to play unavailable track: ${track.title}. Skipping...`);
             await this.playNext();
@@ -1431,6 +1454,11 @@ export class Player {
                 }
 
                 streamUrl = resolvedStreamInfo.url;
+                if (!streamUrl) {
+                    throw new Error(
+                        resolvedStreamInfo.error || 'No stream URL available for this track'
+                    );
+                }
                 if (resolvedStreamInfo.provider === 'amazon' && resolvedStreamInfo.quality) {
                     track.amazonMusicQualitySelected = resolvedStreamInfo.quality;
                     track.amazonMusicQualityDisplay = resolvedStreamInfo.qualityDisplay;

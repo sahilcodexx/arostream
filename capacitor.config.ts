@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
     appId: 'tf.monochrome.music',
-    appName: 'Monochrome Music',
+    appName: 'Arostream Music',
     webDir: 'dist',
     assets: {
         iconBackgroundColor: '#000000',

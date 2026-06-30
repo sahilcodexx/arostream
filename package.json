@@ -1,17 +1,19 @@
 {
-    "name": "monochrome",
+    "name": "arostream",
     "type": "module",
     "version": "2.5.1",
-    "description": "[<img src=\"https://github.com/monochrome-music/monochrome/blob/main/assets/512.png?raw=true\" alt=\"Monochrome Logo\">](https://monochrome.tf)",
+    "description": "[<img src=\"https://github.com/monochrome-music/monochrome/blob/main/assets/512.png?raw=true\" alt=\"Arostream Logo\">](https://monochrome.tf)",
     "scripts": {
         "dev": "vite",
+        "server:yt": "node server/youtube-api.mjs",
+        "dev:all": "npx --yes concurrently -k -n yt,vite -c blue,green \"npm run server:yt\" \"npm run dev\"",
         "test": "vitest run --config=vite.config.ts",
         "test:headless": "HEADLESS=true vitest run --config=vite.config.ts",
         "test:watch": "vitest --config=vite.config.ts",
         "test:watch:headless": "HEADLESS=true vitest --config=vite.config.ts",
         "install:playwright": "playwright install chromium",
         "build": "vite build && vite-bundle-visualizer -o dist/assets/bundle-stats.html --open false",
-        "postbuild": "node -e \"const fs = require('fs'); const path = require('path'); const src = 'extensions'; const dest = path.join('dist', 'Monochrome', 'extensions'); if (fs.existsSync(src)) { fs.mkdirSync(dest, { recursive: true }); fs.cpSync(src, dest, { recursive: true }); console.log('Extensions manually copied to ' + dest); }\"",
+        "postbuild": "node -e \"const fs = require('fs'); const path = require('path'); const src = 'extensions'; const dest = path.join('dist', 'Arostream', 'extensions'); if (fs.existsSync(src)) { fs.mkdirSync(dest, { recursive: true }); fs.cpSync(src, dest, { recursive: true }); console.log('Extensions manually copied to ' + dest); }\"",
         "preview": "vite preview",
         "lint:js": "eslint .",
         "lint:css": "stylelint \"**/*.css\"",
@@ -23,7 +25,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/monochrome-music/monochrome.git"
+        "url": "git+https://github.com/sahilcodexx/arostream.git"
     },
     "keywords": [
         "music"
@@ -31,9 +33,9 @@
     "author": "",
     "license": "Apache-2.0",
     "bugs": {
-        "url": "https://github.com/monochrome-music/monochrome/issues"
+        "url": "https://github.com/sahilcodexx/arostream/issues"
     },
-    "homepage": "https://github.com/monochrome-music/monochrome#readme",
+    "homepage": "https://github.com/sahilcodexx/arostream#readme",
     "devDependencies": {
         "@capacitor/assets": "^3.0.5",
         "@capacitor/cli": "^8.2.0",
@@ -101,6 +103,7 @@
         "typescript-eslint": "^8.57.2",
         "url-toolkit": "^2.2.5",
         "uuid": "^13.0.0",
-        "vitest": "^4.1.2"
+        "vitest": "^4.1.2",
+        "youtubei.js": "^17.2.0"
     }
 }

@@ -47,8 +47,15 @@ class SmartRecommendations {
             .slice(0, count)
             .map((s) => s.track);
 
-        const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-        return shuffle(filteredSeeds);
+        return filteredSeeds;
+    }
+
+    _normalizeArtistName(name = '') {
+        return String(name)
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     _getCompletionBonus(trackId) {
@@ -87,13 +94,27 @@ class SmartRecommendations {
         const dislikedArtistIds = new Set(listeningTracker.getDislikedArtistIds());
         const topArtists = listeningTracker.getTopArtists(30);
         const topArtistIds = new Set(topArtists.map((a) => a.id));
+        const topArtistNames = new Map(
+            topArtists.map((a) => [this._normalizeArtistName(a.name), a])
+        );
 
         if (track.artist?.id && topArtistIds.has(String(track.artist.id))) {
             const artist = topArtists.find((a) => a.id === String(track.artist.id));
             score += artist ? Math.min(artist.affinity * 2, 5) : 1;
+        } else if (track.artist?.name) {
+            const match = topArtistNames.get(this._normalizeArtistName(track.artist.name));
+            if (match) score += Math.min(match.affinity * 2, 5);
         }
         if (track.artists?.some((a) => a.id && topArtistIds.has(String(a.id)))) {
             score += 1;
+        } else if (track.artists?.length) {
+            for (const a of track.artists) {
+                const match = topArtistNames.get(this._normalizeArtistName(a.name));
+                if (match) {
+                    score += Math.min(match.affinity, 3);
+                    break;
+                }
+            }
         }
         if (this._isTrackByDislikedArtist(track, dislikedArtistIds)) {
             score -= 5;
