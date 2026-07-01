@@ -117,6 +117,8 @@ export class Player {
         this.autoplaySeeds = [];
         this.isFetchingAutoplay = false;
         this.autoplayFetchPromise = null;
+        this.youtubeUpNextFetchPromise = null;
+        this.youtubeUpNextSeedId = null;
         this._recentlyPlayedIds = [];
         this._maxRecentlyPlayed = 100;
 
@@ -1115,6 +1117,7 @@ export class Player {
 
         this.currentTrack = track;
         this.addToRecentlyPlayed(track.id);
+        void this.fillYouTubeUpNextQueue(track, currentSequence);
         const trackTitle = getTrackTitle(track);
         const artistName = getTrackArtists(track);
         const trackArtistsHTML = getTrackArtistsHTML(track);
@@ -1796,8 +1799,7 @@ export class Player {
                     });
 
                     if (newTracks.length > 0) {
-                        const tracksToAdd = newTracks.sort(() => 0.5 - Math.random()).slice(0, 5);
-                        await this.addToQueue(tracksToAdd);
+                        await this.addToQueue(newTracks.slice(0, 5));
                     }
                 }
             } catch (error) {
@@ -1895,6 +1897,51 @@ export class Player {
         }
     }
 
+    async fillYouTubeUpNextQueue(track = this.currentTrack, playbackSequence = this.playbackSequence) {
+        if (!track?.id?.startsWith?.('yt:')) return;
+
+        const targetQueueSize = 25;
+        const minRemainingTracks = 8;
+        const currentQueue = this.getCurrentQueue();
+        const remainingTracks = currentQueue.length - this.currentQueueIndex - 1;
+        if (remainingTracks >= minRemainingTracks) return;
+
+        if (this.youtubeUpNextFetchPromise && this.youtubeUpNextSeedId === track.id) {
+            return this.youtubeUpNextFetchPromise;
+        }
+
+        this.youtubeUpNextSeedId = track.id;
+        this.youtubeUpNextFetchPromise = (async () => {
+            try {
+                const queueIds = new Set(this.getCurrentQueue().map((t) => t.id));
+                const recommendations = await this.api.getRecommendedTracksForPlaylist([track], targetQueueSize, {
+                    knownTrackIds: queueIds,
+                });
+
+                if (playbackSequence !== this.playbackSequence || this.currentTrack?.id !== track.id) return;
+
+                const latestQueueIds = new Set(this.getCurrentQueue().map((t) => t.id));
+                const tracksToAdd = (recommendations || [])
+                    .filter((item) => item?.id && !latestQueueIds.has(item.id))
+                    .slice(0, Math.max(0, targetQueueSize - remainingTracks));
+
+                if (tracksToAdd.length > 0) {
+                    await this.addToQueue(tracksToAdd);
+                    this.preloadNextTracks();
+                }
+            } catch (error) {
+                console.warn('Failed to fill YouTube up next queue:', error);
+            } finally {
+                if (this.youtubeUpNextSeedId === track.id) {
+                    this.youtubeUpNextFetchPromise = null;
+                    this.youtubeUpNextSeedId = null;
+                }
+            }
+        })();
+
+        return this.youtubeUpNextFetchPromise;
+    }
+
     fetchAutoplayRecommendations() {
         if (this.isFetchingAutoplay) return this.autoplayFetchPromise || Promise.resolve();
         this.isFetchingAutoplay = true;
@@ -1912,15 +1959,16 @@ export class Player {
                     this.currentQueueIndex + 1
                 );
 
-                const seeds = await smartRecommendations.getAdaptiveQueueSeeds(
+                let seeds = await smartRecommendations.getAdaptiveQueueSeeds(
                     recentQueueTracks,
                     this._recentlyPlayedIds,
                     5
                 );
 
-                if (seeds.length === 0) {
-                    if (this.currentTrack) seeds.push(this.currentTrack);
-                    else return;
+                if (this.currentTrack) {
+                    seeds = [this.currentTrack, ...seeds.filter((s) => s.id !== this.currentTrack.id)];
+                } else if (seeds.length === 0) {
+                    return;
                 }
 
                 const [favorites, userPlaylists, history] = await Promise.all([
@@ -1941,9 +1989,12 @@ export class Player {
                     knownTrackIds: knownTrackIds,
                 });
 
+                const preserveYtOrder = this.currentTrack?.id?.startsWith?.('yt:');
                 if (_autoplaySettings.isSmartRecsEnabled()) {
                     recommendations = smartRecommendations.filterRecommendations(recommendations);
-                    recommendations = smartRecommendations.rankRecommendations(recommendations);
+                    if (!preserveYtOrder) {
+                        recommendations = smartRecommendations.rankRecommendations(recommendations);
+                    }
                 }
 
                 if (recommendations && recommendations.length > 0) {

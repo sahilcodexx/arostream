@@ -1535,7 +1535,17 @@ export class UIRenderer {
         this.updateFullscreenLyricsVisibility(overlay);
 
         void this.updateFullscreenMetadata(track, nextTrack);
-        void this.refreshFullscreenVisualizerState(activeElement, { deferStart: true });
+        void this.refreshFullscreenVisualizerState(activeElement);
+        setTimeout(() => {
+            const currentOverlay = document.getElementById('fullscreen-cover-overlay');
+            if (
+                currentOverlay?.style.display === 'flex' &&
+                !currentOverlay.classList.contains('visualizer-active') &&
+                !this.fullscreenVisualizerSuppressed
+            ) {
+                void this.refreshFullscreenVisualizerState(this.player?.activeElement || activeElement);
+            }
+        }, 800);
     }
 
     updateFullscreenLyricsVisibility(overlay = document.getElementById('fullscreen-cover-overlay')) {
@@ -2936,13 +2946,19 @@ export class UIRenderer {
 
             await this.renderHomeRecent();
 
-            // Load dynamic sections in parallel with pre-fetched seeds
-            const seeds = await this.getSeeds();
-            await Promise.all([
-                this.renderHomeSongs(false, seeds),
-                this.renderHomeAlbums(false, seeds),
-                this.renderHomeArtists(false, seeds),
-            ]);
+            // Load dynamic recommendation sections in the background so slow
+            // external APIs never block navigation/search routing.
+            void this.getSeeds()
+                .then((seeds) =>
+                    Promise.allSettled([
+                        this.renderHomeSongs(false, seeds),
+                        this.renderHomeAlbums(false, seeds),
+                        this.renderHomeArtists(false, seeds),
+                    ])
+                )
+                .catch((e) => {
+                    console.warn('Failed to load home recommendations:', e);
+                });
         } finally {
             this.renderLock = false;
         }
@@ -3798,6 +3814,7 @@ export class UIRenderer {
     async renderHomeSongs(forceRefresh = false, providedSeeds = null) {
         const songsContainer = document.getElementById('home-recommended-songs');
         const section = songsContainer?.closest('.content-section');
+        const isStillHome = () => this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
 
         if (!homePageSettings.shouldShowRecommendedSongs()) {
             if (section) section.style.display = 'none';
@@ -3845,6 +3862,7 @@ export class UIRenderer {
 
                 const filteredTracks = await this.filterUserContent(recommendedTracks, 'track');
                 this.lastRecommendedTracks = filteredTracks;
+                if (!isStillHome()) return;
 
                 if (filteredTracks.length > 0) {
                     await this.renderListWithTracks(songsContainer, filteredTracks, true, false, false, true);
@@ -3861,6 +3879,7 @@ export class UIRenderer {
     async renderHomeAlbums(forceRefresh = false, providedSeeds = null, retryCount = 0) {
         const albumsContainer = document.getElementById('home-recommended-albums');
         const section = albumsContainer?.closest('.content-section');
+        const isStillHome = () => this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
 
         if (!homePageSettings.shouldShowRecommendedAlbums()) {
             if (section) section.style.display = 'none';
@@ -3899,6 +3918,7 @@ export class UIRenderer {
                 }
 
                 if (filteredAlbums.length > 0) {
+                    if (!isStillHome()) return;
                     albumsContainer.innerHTML = filteredAlbums
                         .slice(0, 12)
                         .map((a) => this.createAlbumCardHTML(a))
@@ -4158,6 +4178,7 @@ export class UIRenderer {
     async renderHomeArtists(forceRefresh = false, providedSeeds = null) {
         const artistsContainer = document.getElementById('home-recommended-artists');
         const section = artistsContainer?.closest('.content-section');
+        const isStillHome = () => this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
 
         if (!homePageSettings.shouldShowRecommendedArtists()) {
             if (section) section.style.display = 'none';
@@ -4189,6 +4210,7 @@ export class UIRenderer {
                     const filteredArtists = await this.filterUserContent(similarArtists, 'artist');
 
                     if (filteredArtists.length > 0) {
+                        if (!isStillHome()) return;
                         artistsContainer.innerHTML = filteredArtists
                             .slice(0, 12)
                             .map((a) => this.createArtistCardHTML(a))
@@ -4229,6 +4251,7 @@ export class UIRenderer {
                     }
 
                     if (similarArtists.length) {
+                        if (!isStillHome()) return;
                         artistsContainer.innerHTML = similarArtists
                             .slice(0, 12)
                             .map((a) => this.createArtistCardHTML(a))

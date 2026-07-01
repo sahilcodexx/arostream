@@ -45,6 +45,19 @@ export class YouTubeMusicAPI {
         }
     }
 
+    async getRelatedTracks(id, limit = 20) {
+        const videoId = extractVideoId(id);
+        if (!videoId) return { items: [], total: 0 };
+
+        try {
+            const data = await fetchBackend(`/related/${videoId}?limit=${limit}`);
+            return { items: data.items || [], total: data.total || 0 };
+        } catch (err) {
+            console.warn('YouTube getRelatedTracks failed:', err.message);
+            return { items: [], total: 0 };
+        }
+    }
+
     async getTrack(id) {
         const videoId = extractVideoId(id);
         if (!videoId) return null;

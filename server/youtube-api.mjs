@@ -1,7 +1,12 @@
 import http from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { searchYouTube, getYouTubeTrack, getYouTubeStream } from './youtube-handler.mjs';
+import {
+    searchYouTube,
+    getYouTubeTrack,
+    getYouTubeStream,
+    getYouTubeRelatedTracks,
+} from './youtube-handler.mjs';
 
 const PORT = Number(process.env.YOUTUBE_API_PORT || 8787);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
@@ -147,6 +152,14 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
+        const relatedMatch = url.pathname.match(/^\/related\/([a-zA-Z0-9_-]{11})$/);
+        if (relatedMatch && req.method === 'GET') {
+            const limit = Math.min(Number(url.searchParams.get('limit') || 20), 50);
+            const result = await getYouTubeRelatedTracks(relatedMatch[1], limit);
+            sendJson(res, 200, result);
+            return;
+        }
+
         sendJson(res, 404, { error: 'not found' });
     } catch (err) {
         console.error('YouTube API error:', err);
@@ -164,6 +177,7 @@ server.listen(PORT, '127.0.0.1', () => {
     console.log('  GET /play/:videoId');
     console.log('  GET /stream/:videoId');
     console.log('  GET /video/:videoId');
+    console.log('  GET /related/:videoId');
 });
 
 process.on('uncaughtException', (err) => {

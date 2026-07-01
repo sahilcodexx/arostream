@@ -53,7 +53,27 @@ async function getInnertube() {
 
 function parseArtist(name) {
     if (!name) return 'Unknown Artist';
-    return String(name).split(',')[0].trim() || 'Unknown Artist';
+    return (
+        String(name)
+            .split(',')[0]
+            .replace(/\s*-\s*Topic$/i, '')
+            .trim() || 'Unknown Artist'
+    );
+}
+
+function getTitleText(title) {
+    if (!title) return '';
+    if (typeof title === 'string') return title;
+    return title.text || title.toString?.() || '';
+}
+
+function isValidYouTubeTrack(track) {
+    if (!track?._videoId || !track?.title) return false;
+    const title = getTitleText(track.title).trim().toLowerCase();
+    const artist = parseArtist(track.artist?.name).toLowerCase();
+    if (!title || title === 'topic' || title === 'unknown track') return false;
+    if (artist === 'topic') return false;
+    return isLikelySong(track);
 }
 
 function parseDurationSeconds(duration) {
@@ -138,7 +158,7 @@ export async function searchYouTube(query, limit = 20) {
     const seen = new Set();
 
     const addTrack = (track) => {
-        if (!track || !isLikelySong(track) || seen.has(track._videoId)) return false;
+        if (!track || !isValidYouTubeTrack(track) || seen.has(track._videoId)) return false;
         seen.add(track._videoId);
         items.push(track);
         return true;
@@ -208,6 +228,114 @@ async function searchYouTubePiped(query, limit) {
         }
     }
     return [];
+}
+
+function mapPlaylistPanelVideo(item) {
+    const id = item.video_id || item.id;
+    if (!id) return null;
+    const artistNames = (item.artists || []).map((a) => a.name).filter(Boolean);
+    const artist = artistNames.length ? artistNames.join(', ') : parseArtist(item.author?.name);
+    const thumbnail = item.thumbnails?.[0]?.url || (id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
+    return buildTrack({
+        id,
+        title: getTitleText(item.title),
+        artist,
+        thumbnail,
+        duration: item.duration?.seconds || item.duration,
+    });
+}
+
+function mapMusicShelfItem(item) {
+    const id = item.id || item.endpoint?.payload?.videoId;
+    if (!id) return null;
+    const artistNames = (item.artists || []).map((a) => a.name).filter(Boolean);
+    return buildTrack({
+        id,
+        title: getTitleText(item.title),
+        artist: artistNames.join(', ') || 'Unknown Artist',
+        thumbnail: item.thumbnails?.[0]?.url,
+        duration: item.duration?.seconds || item.duration,
+    });
+}
+
+async function getArtistTopSongs(artistName, excludeVideoId = null, limit = 15) {
+    const yt = await getInnertube();
+    const items = [];
+    const seen = new Set();
+
+    try {
+        const search = await yt.music.search(artistName, { type: 'artist' });
+        const match =
+            search.artists?.contents?.find(
+                (a) => parseArtist(a.name).toLowerCase() === parseArtist(artistName).toLowerCase()
+            ) || search.artists?.contents?.[0];
+        const browseId = match?.browse_id || match?.channel_id;
+        if (!browseId) return items;
+
+        const page = await yt.music.getArtist(browseId);
+        for (const section of page.sections || []) {
+            if (section.type !== 'MusicShelf') continue;
+            for (const song of section.contents || []) {
+                const track = mapMusicShelfItem(song);
+                if (!track || !isValidYouTubeTrack(track) || !isLikelySong(track)) continue;
+                if (excludeVideoId && track._videoId === excludeVideoId) continue;
+                if (seen.has(track._videoId)) continue;
+                seen.add(track._videoId);
+                items.push(track);
+                if (items.length >= limit) return items;
+            }
+        }
+    } catch (err) {
+        console.warn('YouTube artist songs failed:', err.message);
+    }
+
+    return items;
+}
+
+export async function getYouTubeRelatedTracks(videoId, limit = 20) {
+    const cleanId = String(videoId || '').replace(/^yt:/, '');
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
+        return { items: [], total: 0 };
+    }
+
+    const items = [];
+    const seen = new Set([cleanId]);
+
+    try {
+        const yt = await getInnertube();
+        const panel = await yt.music.getUpNext(cleanId);
+        const contents = panel.contents || [];
+        for (let i = 0; i < contents.length; i++) {
+            const track = mapPlaylistPanelVideo(contents[i]);
+            if (!track || !isValidYouTubeTrack(track) || !isLikelySong(track)) continue;
+            if (seen.has(track._videoId)) continue;
+            seen.add(track._videoId);
+            items.push(track);
+            if (items.length >= limit) break;
+        }
+    } catch (err) {
+        console.warn('YouTube getUpNext failed:', err.message);
+    }
+
+    if (items.length < limit) {
+        try {
+            const seed = await getYouTubeTrack(cleanId);
+            const artistName = seed?.artist?.name;
+            if (artistName && artistName !== 'Unknown Artist') {
+                const artistSongs = await getArtistTopSongs(artistName, cleanId, limit - items.length);
+                for (const track of artistSongs) {
+                    if (seen.has(track._videoId)) continue;
+                    seen.add(track._videoId);
+                    items.push(track);
+                    if (items.length >= limit) break;
+                }
+            }
+        } catch (err) {
+            console.warn('YouTube artist fallback failed:', err.message);
+        }
+    }
+
+    return { items, total: items.length };
 }
 
 export async function getYouTubeTrack(videoId) {

@@ -685,36 +685,65 @@ export class MusicAPI {
         const hasJio = normalized.some((t) => t.id?.startsWith?.('j:'));
         const hasYt = normalized.some((t) => t.id?.startsWith?.('yt:'));
 
-        if (hasJio || hasYt) {
-            const recommended = [];
-            const seen = new Set(normalized.map((t) => t.id));
+        const recommended = [];
+        const seen = new Set(normalized.map((t) => t.id));
 
-            const addTrack = (track) => {
-                if (!track?.id || seen.has(track.id)) return;
-                if (options.knownTrackIds?.has(track.id)) return;
-                seen.add(track.id);
-                recommended.push(track);
-            };
+        const isGarbageTrack = (track) => {
+            const title = String(track?.title || '')
+                .trim()
+                .toLowerCase();
+            const artist = String(track?.artist?.name || track?.artists?.[0]?.name || '')
+                .trim()
+                .toLowerCase();
+            return !track?.id || title === 'topic' || artist === 'topic';
+        };
 
-            for (const seed of normalized.slice(0, 8)) {
+        const addTrack = (track) => {
+            if (!track?.id || seen.has(track.id) || isGarbageTrack(track)) return;
+            if (options.knownTrackIds?.has(track.id)) return;
+            seen.add(track.id);
+            recommended.push(track);
+        };
+
+        if (hasYt) {
+            const ytSeeds = normalized.filter((t) => t.id?.startsWith?.('yt:'));
+
+            for (const seed of ytSeeds.slice(0, 3)) {
                 if (recommended.length >= limit) break;
-                const artistName = seed.artist?.name || seed.artists?.[0]?.name;
+                const related = await this.youtubeAPI.getRelatedTracks(seed.id, limit);
+                for (const item of related.items || []) {
+                    addTrack(item);
+                    if (recommended.length >= limit) break;
+                }
+            }
 
-                if (seed.id?.startsWith('yt:') && artistName) {
-                    for (const query of [`${artistName} ghazal`, artistName]) {
-                        const ytResult = await this.youtubeAPI.searchTracks(query, { limit: 10 });
-                        for (const item of ytResult.items) {
-                            if (artistNameMatches(item, artistName)) addTrack(item);
-                        }
+            if (recommended.length < limit) {
+                for (const seed of ytSeeds.slice(0, 3)) {
+                    if (recommended.length >= limit) break;
+                    const artistName = seed.artist?.name || seed.artists?.[0]?.name;
+                    if (!artistName || artistName === 'Unknown Artist') continue;
+
+                    const ytResult = await this.youtubeAPI.searchTracks(artistName, { limit: 15 });
+                    for (const item of ytResult.items) {
+                        if (artistNameMatches(item, artistName)) addTrack(item);
                         if (recommended.length >= limit) break;
                     }
                 }
+            }
+
+            if (recommended.length) return recommended.slice(0, limit);
+        }
+
+        if (hasJio) {
+            for (const seed of normalized.slice(0, 8)) {
+                if (recommended.length >= limit) break;
 
                 if (seed.id?.startsWith('j:')) {
                     const trackRecs = await this.jiosaavnAPI.getTrackRecommendations(seed.id);
                     for (const item of trackRecs) addTrack(item);
                 }
 
+                const artistName = seed.artist?.name || seed.artists?.[0]?.name;
                 if (artistName) {
                     const jioRecs = await this.jiosaavnAPI.getRecommendedTracksForPlaylist(
                         [{ artist: { name: artistName } }],
