@@ -2192,6 +2192,10 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                         document.getElementById('shuffle-btn').classList.remove('active');
                         player.playTrackFromQueue();
 
+                        if (clickedTrack.id?.startsWith?.('yt:')) {
+                            return;
+                        }
+
                         const { autoplaySettings } = await import('./storage.js');
                         const fetchRecs = autoplaySettings.isSmartRecsEnabled()
                             ? (async () => {

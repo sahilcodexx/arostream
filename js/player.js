@@ -1901,11 +1901,6 @@ export class Player {
         if (!track?.id?.startsWith?.('yt:')) return;
 
         const targetQueueSize = 25;
-        const minRemainingTracks = 8;
-        const currentQueue = this.getCurrentQueue();
-        const remainingTracks = currentQueue.length - this.currentQueueIndex - 1;
-        if (remainingTracks >= minRemainingTracks) return;
-
         if (this.youtubeUpNextFetchPromise && this.youtubeUpNextSeedId === track.id) {
             return this.youtubeUpNextFetchPromise;
         }
@@ -1913,20 +1908,32 @@ export class Player {
         this.youtubeUpNextSeedId = track.id;
         this.youtubeUpNextFetchPromise = (async () => {
             try {
-                const queueIds = new Set(this.getCurrentQueue().map((t) => t.id));
+                const queueIds = new Set([track.id]);
                 const recommendations = await this.api.getRecommendedTracksForPlaylist([track], targetQueueSize, {
                     knownTrackIds: queueIds,
                 });
 
                 if (playbackSequence !== this.playbackSequence || this.currentTrack?.id !== track.id) return;
 
-                const latestQueueIds = new Set(this.getCurrentQueue().map((t) => t.id));
+                const latestQueue = this.getCurrentQueue();
+                const currentTrackIds = new Set(latestQueue.slice(0, this.currentQueueIndex + 1).map((t) => t.id));
                 const tracksToAdd = (recommendations || [])
-                    .filter((item) => item?.id && !latestQueueIds.has(item.id))
-                    .slice(0, Math.max(0, targetQueueSize - remainingTracks));
+                    .filter((item) => item?.id && !currentTrackIds.has(item.id))
+                    .slice(0, targetQueueSize);
 
                 if (tracksToAdd.length > 0) {
-                    await this.addToQueue(tracksToAdd);
+                    if (this.shuffleActive) {
+                        const insertIndex = this.currentQueueIndex + 1;
+                        this.shuffledQueue.splice(insertIndex, this.shuffledQueue.length - insertIndex, ...tracksToAdd);
+                        this.originalQueueBeforeShuffle = [
+                            ...this.originalQueueBeforeShuffle.slice(0, this.currentQueueIndex + 1),
+                            ...tracksToAdd,
+                        ];
+                    } else {
+                        const insertIndex = this.currentQueueIndex + 1;
+                        this.queue.splice(insertIndex, this.queue.length - insertIndex, ...tracksToAdd);
+                    }
+                    await this.saveQueueState();
                     this.preloadNextTracks();
                 }
             } catch (error) {

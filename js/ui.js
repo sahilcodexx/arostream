@@ -940,6 +940,7 @@ export class UIRenderer {
         if (contentBlockingSettings?.isHardcodedBlockedArtist(artist?.id)) return '';
         const isCompact = cardSettings.isCompactArtist();
         const isBlocked = contentBlockingSettings?.shouldHideArtist(artist);
+        const artistImage = artist.picture || artist.image || artist.cover || artist.album?.cover || null;
 
         return this.createBaseCardHTML({
             type: 'artist',
@@ -948,7 +949,7 @@ export class UIRenderer {
             title: escapeHtml(artist.name),
             subtitle: '',
             imageHTML: this.getCoverHTML(
-                artist.picture,
+                artistImage,
                 escapeHtml(artist.name),
                 'card-image',
                 artist._lazy === false ? 'eager' : 'lazy',
@@ -2926,7 +2927,7 @@ export class UIRenderer {
             }
 
             if (welcomeEl) welcomeEl.style.display = 'none';
-            if (contentEl) contentEl.style.display = 'block';
+            if (contentEl) contentEl.style.display = 'grid';
 
             const refreshSongsBtn = document.getElementById('refresh-songs-btn');
             const refreshAlbumsBtn = document.getElementById('refresh-albums-btn');

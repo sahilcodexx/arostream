@@ -2476,7 +2476,6 @@ export const sidebarSectionSettings = {
         'sidebar-nav-settings',
         'sidebar-nav-about-bottom',
         'sidebar-nav-mobile',
-        'sidebar-nav-discordbtn',
         'sidebar-nav-party',
         'sidebar-nav-githubbtn',
     ],
@@ -2578,12 +2577,7 @@ export const sidebarSectionSettings = {
     },
 
     shouldShowDiscord() {
-        try {
-            const val = localStorage.getItem(this.SHOW_DISCORD_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
+        return false;
     },
 
     setShowDiscord(enabled) {
@@ -2682,7 +2676,6 @@ export const sidebarSectionSettings = {
             { id: 'sidebar-nav-settings', check: this.shouldShowSettings() },
             { id: 'sidebar-nav-about-bottom', check: this.shouldShowAbout() },
             { id: 'sidebar-nav-mobile', check: true },
-            { id: 'sidebar-nav-discordbtn', check: this.shouldShowDiscord() },
             { id: 'sidebar-nav-party', check: this.shouldShowParty() },
             { id: 'sidebar-nav-githubbtn', check: this.shouldShowGithub() },
         ];

@@ -51,6 +51,14 @@ async function getInnertube() {
     return innertubePromise;
 }
 
+function withTimeout(promise, ms, message) {
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function parseArtist(name) {
     if (!name) return 'Unknown Artist';
     return (
@@ -330,7 +338,7 @@ export async function getYouTubeRelatedTracks(videoId, limit = 20) {
 
     try {
         const yt = await getInnertube();
-        const panel = await yt.music.getUpNext(cleanId);
+        const panel = await withTimeout(yt.music.getUpNext(cleanId), 10000, 'YouTube getUpNext timed out');
         const contents = panel.contents || [];
         for (let i = 0; i < contents.length; i++) {
             const track = mapPlaylistPanelVideo(contents[i]);

@@ -1271,7 +1271,7 @@
                     <br />
                     A Guide To Set This Up Can Be Found
                     <a
-                        href="https://github.com/monochrome-music/monochrome/blob/main/DOCKER.md"
+                        href="https://github.com/sahilcodexx/arostream"
                         style="text-decoration: underline"
                         >Here</a
                     >.
@@ -1480,7 +1480,7 @@
                             <p style="font-size: 0.8rem; color: var(--muted-foreground); margin-bottom: 0.5rem">
                                 Define your CSS variables or custom styles here.
                                 <a
-                                    href="https://github.com/monochrome-music/monochrome/blob/main/THEME_GUIDE.md"
+                                    href="https://github.com/sahilcodexx/arostream"
                                     target="_blank"
                                     style="text-decoration: underline; color: var(--primary)"
                                     >Read the Theme Guide</a
@@ -1809,12 +1809,6 @@
                                             <span>Mobile</span>
                                         </a>
                                     </li>
-                                    <li class="nav-item" id="sidebar-nav-discordbtn">
-                                        <a href="discord.html" target="_blank">
-                                            <use svg="./images/discord.svg" size="64" />
-                                            <span>Discord</span>
-                                        </a>
-                                    </li>
                                     <li class="nav-item" id="sidebar-nav-party">
                                         <a href="/parties" id="sidebar-party-btn">
                                             <use svg="!lucide/users.svg" size="24" />
@@ -1822,7 +1816,7 @@
                                         </a>
                                     </li>
                                     <li class="nav-item" id="sidebar-nav-githubbtn" style="display: none">
-                                        <a href="https://github.com/monochrome-music/monochrome" target="_blank">
+                                        <a href="https://github.com/sahilcodexx/arostream" target="_blank">
                                             <use svg="./images/github.svg" size="24" />
                                             <span>GitHub</span>
                                         </a>
@@ -1869,7 +1863,7 @@
                         </button>
                         <div id="search-history" class="search-history" style="display: none"></div>
                     </form>
-                    <div class="header-account-control">
+                    <div class="header-account-control" hidden>
                         <button
                             id="header-account-btn"
                             class="btn-icon"
@@ -1915,7 +1909,7 @@
                         </div>
 
                         <div id="home-content" style="display: none">
-                            <section class="content-section">
+                            <section class="content-section home-section-songs">
                                 <div class="section-header-row">
                                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
                                         <h2 class="section-title">Recommended Songs</h2>
@@ -1946,7 +1940,7 @@
                                 </div>
                                 <div class="track-list" id="home-recommended-songs"></div>
                             </section>
-                            <section class="content-section">
+                            <section class="content-section home-section-albums">
                                 <div
                                     style="
                                         display: flex;
@@ -1967,7 +1961,7 @@
                                 </div>
                                 <div class="card-grid" id="home-recommended-albums"></div>
                             </section>
-                            <section class="content-section">
+                            <section class="content-section home-section-artists">
                                 <div
                                     style="
                                         display: flex;
@@ -1988,7 +1982,7 @@
                                 </div>
                                 <div class="card-grid" id="home-recommended-artists"></div>
                             </section>
-                            <section class="content-section">
+                            <section class="content-section home-section-recent">
                                 <div
                                     style="
                                         display: flex;
@@ -3646,18 +3640,6 @@
                                         </div>
                                         <label class="toggle-switch">
                                             <input type="checkbox" id="sidebar-show-about-bottom-toggle" checked />
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="setting-item">
-                                        <div class="info">
-                                            <span class="label">Show Discord in Sidebar</span>
-                                            <span class="description"
-                                                >Display the Discord link in the sidebar navigation</span
-                                            >
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="sidebar-show-discordbtn-toggle" checked />
                                             <span class="slider"></span>
                                         </label>
                                     </div>
@@ -6109,7 +6091,7 @@
                                     Donate to Arostream
                                 </a>
                                 <a
-                                    href="https://github.com/monochrome-music/monochrome"
+                                    href="https://github.com/sahilcodexx/arostream"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="btn-secondary"
@@ -6157,7 +6139,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="page-account" class="page">
+                <div id="page-account" class="page" hidden>
                     <h2 class="section-title" style="text-align: center">Sign Up / Sign In</h2>
                     <div class="account-content">
                         <p style="text-align: center" class="account-description">
@@ -6176,8 +6158,8 @@
                             "
                         >
                             <button id="auth-connect-btn" class="btn-secondary">Connect with Google</button>
-                            <button id="auth-github-btn" class="btn-secondary">Connect with GitHub</button>
-                            <button id="auth-discord-btn" class="btn-secondary">Connect with Discord</button>
+                            <button id="auth-github-btn" class="btn-secondary" hidden>Connect with GitHub</button>
+                            <button id="auth-discord-btn" class="btn-secondary" hidden>Connect with Discord</button>
                             <button id="toggle-email-auth-btn" class="btn-secondary">Connect with Email</button>
                             <button id="view-my-profile-btn" class="btn-secondary" style="display: none">
                                 View My Profile
@@ -6516,7 +6498,7 @@
                                 sharing with friends!
                             </p>
                             <a
-                                href="https://github.com/monochrome-music/monochrome"
+                                href="https://github.com/sahilcodexx/arostream"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="btn-secondary donate-github-btn"

@@ -163,11 +163,21 @@ export class MusicAPI {
     _extractArtistsFromTracks(tracks, artistMap = new Map()) {
         for (const track of tracks) {
             if (track.artist?.id && !artistMap.has(track.artist.id)) {
-                artistMap.set(track.artist.id, track.artist);
+                artistMap.set(track.artist.id, {
+                    ...track.artist,
+                    picture: track.artist.picture || track.artist.image || track.artist.cover || track.album?.cover || track.cover,
+                    image: track.artist.image || track.artist.picture || track.artist.cover || track.album?.cover || track.cover,
+                    cover: track.artist.cover || track.artist.picture || track.artist.image || track.album?.cover || track.cover,
+                });
             }
             for (const artist of track.artists || []) {
                 if (artist?.id && !artistMap.has(artist.id)) {
-                    artistMap.set(artist.id, artist);
+                    artistMap.set(artist.id, {
+                        ...artist,
+                        picture: artist.picture || artist.image || artist.cover || track.album?.cover || track.cover,
+                        image: artist.image || artist.picture || artist.cover || track.album?.cover || track.cover,
+                        cover: artist.cover || artist.picture || artist.image || track.album?.cover || track.cover,
+                    });
                 }
             }
         }
