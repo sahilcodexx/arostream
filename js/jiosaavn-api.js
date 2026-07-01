@@ -17,7 +17,12 @@ const IMAGE_QUALITY_PRIORITY = ['500x500', '150x150', '50x50'];
 export function enhanceCoverUrl(url) {
     if (!url || typeof url !== 'string') return url;
     if (url.includes('i.ytimg.com/vi/')) {
-        return url.replace(/\/(hqdefault|mqdefault|sddefault|default)(\.[a-z]+)?$/i, '/maxresdefault.jpg');
+        return url.replace(/\/(hqdefault|mqdefault|sddefault|default)(\.[a-z]+)?(?:\?.*)?$/i, '/maxresdefault.jpg');
+    }
+    if (url.includes('yt3.googleusercontent.com')) {
+        return url
+            .replace(/=w\d+-h\d+[^&]*/i, '=w640-h640-l90-rj')
+            .replace(/=s\d+[^&]*/i, '=s640');
     }
     if (url.includes('saavncdn.com')) {
         return url

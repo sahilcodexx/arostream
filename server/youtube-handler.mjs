@@ -88,10 +88,39 @@ function parseDurationSeconds(duration) {
     return 0;
 }
 
+function getThumbnailUrl(thumbnails, fallbackId = null) {
+    const list = Array.isArray(thumbnails) ? thumbnails : thumbnails ? [thumbnails] : [];
+    const best = list
+        .map((thumb) => (typeof thumb === 'string' ? { url: thumb } : thumb))
+        .filter((thumb) => thumb?.url)
+        .sort((a, b) => (Number(b.width) || 0) * (Number(b.height) || 0) - (Number(a.width) || 0) * (Number(a.height) || 0))[0];
+
+    const url = best?.url || (fallbackId ? `https://i.ytimg.com/vi/${fallbackId}/maxresdefault.jpg` : null);
+    return enhanceYouTubeThumbnail(url, fallbackId);
+}
+
+function enhanceYouTubeThumbnail(url, fallbackId = null) {
+    if (!url && fallbackId) return `https://i.ytimg.com/vi/${fallbackId}/maxresdefault.jpg`;
+    if (!url) return null;
+
+    const cleanUrl = String(url).replace(/^http:\/\//, 'https://');
+    if (cleanUrl.includes('i.ytimg.com/vi/')) {
+        return cleanUrl.replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)?(?:\?.*)?$/i, '/maxresdefault.jpg');
+    }
+
+    if (cleanUrl.includes('yt3.googleusercontent.com')) {
+        return cleanUrl
+            .replace(/=w\d+-h\d+[^&]*/i, '=w640-h640-l90-rj')
+            .replace(/=s\d+[^&]*/i, '=s640');
+    }
+
+    return cleanUrl;
+}
+
 function buildTrack({ id, title, artist, thumbnail, duration }) {
     if (!id) return null;
     const parsedArtist = parseArtist(artist || 'Unknown Artist');
-    const cover = thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+    const cover = enhanceYouTubeThumbnail(thumbnail, id);
     const durationSeconds = parseDurationSeconds(duration);
 
     return {
@@ -113,9 +142,7 @@ function buildTrack({ id, title, artist, thumbnail, duration }) {
 function mapMusicItemToTrack(item) {
     const id = item.id || item.endpoint?.payload?.videoId;
     const artist = item.artists?.[0]?.name || item.author?.name || item.authors?.[0]?.name;
-    const thumbnail =
-        item.thumbnails?.[0]?.url ||
-        (id ? `https://i.ytimg.com/vi/${id}/maxresdefault.jpg` : null);
+    const thumbnail = getThumbnailUrl(item.thumbnails, id);
     return buildTrack({
         id,
         title: item.title,
@@ -141,7 +168,7 @@ function mapVideoToTrack(video) {
         video.basic_info?.author ||
         'Unknown Artist';
 
-    const thumbnail = video.best_thumbnail?.url || video.thumbnails?.[0]?.url;
+    const thumbnail = getThumbnailUrl(video.thumbnails || video.basic_info?.thumbnail || video.best_thumbnail, id);
     const duration = video.duration?.seconds || video.duration || 0;
 
     return buildTrack({ id, title, artist, thumbnail, duration });
@@ -218,7 +245,7 @@ async function searchYouTubePiped(query, limit) {
                         title: { text: item.title },
                         author: { name: item.uploaderName },
                         duration: { seconds: item.duration },
-                        best_thumbnail: { url: item.thumbnail },
+                        best_thumbnail: { url: enhanceYouTubeThumbnail(item.thumbnail, videoId) },
                     });
                 })
                 .filter(Boolean)
@@ -235,7 +262,7 @@ function mapPlaylistPanelVideo(item) {
     if (!id) return null;
     const artistNames = (item.artists || []).map((a) => a.name).filter(Boolean);
     const artist = artistNames.length ? artistNames.join(', ') : parseArtist(item.author?.name);
-    const thumbnail = item.thumbnails?.[0]?.url || (id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
+    const thumbnail = getThumbnailUrl(item.thumbnails, id);
     return buildTrack({
         id,
         title: getTitleText(item.title),
@@ -253,7 +280,7 @@ function mapMusicShelfItem(item) {
         id,
         title: getTitleText(item.title),
         artist: artistNames.join(', ') || 'Unknown Artist',
-        thumbnail: item.thumbnails?.[0]?.url,
+        thumbnail: getThumbnailUrl(item.thumbnails, id),
         duration: item.duration?.seconds || item.duration,
     });
 }
@@ -346,7 +373,7 @@ export async function getYouTubeTrack(videoId) {
         title: info.basic_info.title,
         author: { name: info.basic_info.author },
         duration: { seconds: info.basic_info.duration },
-        best_thumbnail: { url: info.basic_info.thumbnail?.[0]?.url },
+        best_thumbnail: { url: getThumbnailUrl(info.basic_info.thumbnail, videoId) },
     });
 }
 
