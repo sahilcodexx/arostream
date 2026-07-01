@@ -1445,8 +1445,7 @@ export class UIRenderer {
                 void nextTrackEl.offsetWidth;
                 nextTrackEl.classList.add('animate-in');
                 nextTrackEl.style.display = 'flex';
-                nextTrackEl.querySelector('.value').textContent =
-                    `${nextTrack.title} • ${getTrackArtists(nextTrack)}`;
+                nextTrackEl.querySelector('.value').textContent = `${nextTrack.title} • ${getTrackArtists(nextTrack)}`;
             }
         } else if (nextTrackEl) {
             nextTrackEl.style.display = 'none';
@@ -3815,7 +3814,8 @@ export class UIRenderer {
     async renderHomeSongs(forceRefresh = false, providedSeeds = null) {
         const songsContainer = document.getElementById('home-recommended-songs');
         const section = songsContainer?.closest('.content-section');
-        const isStillHome = () => this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
+        const isStillHome = () =>
+            this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
 
         if (!homePageSettings.shouldShowRecommendedSongs()) {
             if (section) section.style.display = 'none';
@@ -3880,7 +3880,8 @@ export class UIRenderer {
     async renderHomeAlbums(forceRefresh = false, providedSeeds = null, retryCount = 0) {
         const albumsContainer = document.getElementById('home-recommended-albums');
         const section = albumsContainer?.closest('.content-section');
-        const isStillHome = () => this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
+        const isStillHome = () =>
+            this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
 
         if (!homePageSettings.shouldShowRecommendedAlbums()) {
             if (section) section.style.display = 'none';
@@ -3899,8 +3900,7 @@ export class UIRenderer {
             try {
                 const seeds = providedSeeds || (await this.getSeeds());
                 const albumSeed = seeds.find((t) => t.album?.id?.startsWith?.('j:'));
-                const artistName =
-                    seeds[0]?.artist?.name || seeds[0]?.artists?.[0]?.name || albumSeed?.artist?.name;
+                const artistName = seeds[0]?.artist?.name || seeds[0]?.artists?.[0]?.name || albumSeed?.artist?.name;
 
                 let filteredAlbums = [];
 
@@ -4179,7 +4179,8 @@ export class UIRenderer {
     async renderHomeArtists(forceRefresh = false, providedSeeds = null) {
         const artistsContainer = document.getElementById('home-recommended-artists');
         const section = artistsContainer?.closest('.content-section');
-        const isStillHome = () => this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
+        const isStillHome = () =>
+            this.currentPage === 'home' && document.getElementById('page-home')?.classList.contains('active');
 
         if (!homePageSettings.shouldShowRecommendedArtists()) {
             if (section) section.style.display = 'none';

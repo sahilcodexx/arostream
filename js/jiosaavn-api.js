@@ -20,14 +20,10 @@ export function enhanceCoverUrl(url) {
         return url.replace(/\/(hqdefault|mqdefault|sddefault|default)(\.[a-z]+)?(?:\?.*)?$/i, '/maxresdefault.jpg');
     }
     if (url.includes('yt3.googleusercontent.com')) {
-        return url
-            .replace(/=w\d+-h\d+[^&]*/i, '=w640-h640-l90-rj')
-            .replace(/=s\d+[^&]*/i, '=s640');
+        return url.replace(/=w\d+-h\d+[^&]*/i, '=w640-h640-l90-rj').replace(/=s\d+[^&]*/i, '=s640');
     }
     if (url.includes('saavncdn.com')) {
-        return url
-            .replace(/-50x50\./, '-500x500.')
-            .replace(/-150x150\./, '-500x500.');
+        return url.replace(/-50x50\./, '-500x500.').replace(/-150x150\./, '-500x500.');
     }
     return url;
 }
@@ -43,11 +39,15 @@ function getBestQualityUrl(qualityList, priority) {
 }
 
 function stripJioArtistId(id) {
-    return String(id || '').replace(/^j:artist_/, '').replace(/^j:/, '');
+    return String(id || '')
+        .replace(/^j:artist_/, '')
+        .replace(/^j:/, '');
 }
 
 function stripJioAlbumId(id) {
-    return String(id || '').replace(/^j:album_/, '').replace(/^j:/, '');
+    return String(id || '')
+        .replace(/^j:album_/, '')
+        .replace(/^j:/, '');
 }
 
 function stripJioTrackId(id) {
@@ -319,15 +319,16 @@ export class JioSaavnAPI {
                         type: 'artist',
                         isJioSaavn: true,
                     });
-                    for (const performer of song.artists || []) addArtist({
-                        id: performer.id,
-                        name: performer.name,
-                        picture: song.cover || song.album?.cover,
-                        cover: song.cover || song.album?.cover,
-                        image: song.cover || song.album?.cover,
-                        type: 'artist',
-                        isJioSaavn: true,
-                    });
+                    for (const performer of song.artists || [])
+                        addArtist({
+                            id: performer.id,
+                            name: performer.name,
+                            picture: song.cover || song.album?.cover,
+                            cover: song.cover || song.album?.cover,
+                            image: song.cover || song.album?.cover,
+                            type: 'artist',
+                            isJioSaavn: true,
+                        });
                 }
                 if (artists.length >= limit) return { items: artists.slice(0, limit), total: artists.length };
             }
@@ -393,7 +394,12 @@ export class JioSaavnAPI {
                 if (track._streamUrl) this.cacheStreamUrl(track.id, track._streamUrl);
             }
 
-            const bioText = Array.isArray(raw.bio) ? raw.bio.map((b) => b.text).filter(Boolean).join('\n\n') : '';
+            const bioText = Array.isArray(raw.bio)
+                ? raw.bio
+                      .map((b) => b.text)
+                      .filter(Boolean)
+                      .join('\n\n')
+                : '';
 
             return {
                 ...mapped,
@@ -417,7 +423,12 @@ export class JioSaavnAPI {
         try {
             const raw = await this.fetchArtistData(id);
             if (!raw?.bio?.length) return null;
-            return { text: raw.bio.map((b) => b.text).filter(Boolean).join('\n\n') };
+            return {
+                text: raw.bio
+                    .map((b) => b.text)
+                    .filter(Boolean)
+                    .join('\n\n'),
+            };
         } catch {
             return null;
         }
@@ -439,7 +450,9 @@ export class JioSaavnAPI {
                     if (performer?.id) {
                         return {
                             id: performer.id.startsWith('j:') ? performer.id : `j:artist_${performer.id}`,
-                            name: String(performer.name).replace(/\u00a0/g, ' ').trim(),
+                            name: String(performer.name)
+                                .replace(/\u00a0/g, ' ')
+                                .trim(),
                             picture: song.cover,
                             cover: song.cover,
                             image: song.cover,
@@ -504,9 +517,7 @@ export class JioSaavnAPI {
         try {
             const raw = await this.fetchArtistData(artistId);
             const selfId = `j:artist_${stripJioArtistId(artistId)}`;
-            const similar = (raw?.similarArtists || [])
-                .map(mapJioSaavnToArtist)
-                .filter((a) => a.id !== selfId);
+            const similar = (raw?.similarArtists || []).map(mapJioSaavnToArtist).filter((a) => a.id !== selfId);
             if (similar.length) return similar.slice(0, 8);
 
             const name = raw?.name;

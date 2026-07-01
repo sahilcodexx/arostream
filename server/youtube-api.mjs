@@ -1,12 +1,7 @@
 import http from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import {
-    searchYouTube,
-    getYouTubeTrack,
-    getYouTubeStream,
-    getYouTubeRelatedTracks,
-} from './youtube-handler.mjs';
+import { searchYouTube, getYouTubeTrack, getYouTubeStream, getYouTubeRelatedTracks } from './youtube-handler.mjs';
 
 const PORT = Number(process.env.YOUTUBE_API_PORT || 8787);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';

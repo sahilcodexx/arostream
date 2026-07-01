@@ -1458,9 +1458,7 @@ export class Player {
 
                 streamUrl = resolvedStreamInfo.url;
                 if (!streamUrl) {
-                    throw new Error(
-                        resolvedStreamInfo.error || 'No stream URL available for this track'
-                    );
+                    throw new Error(resolvedStreamInfo.error || 'No stream URL available for this track');
                 }
                 if (resolvedStreamInfo.provider === 'amazon' && resolvedStreamInfo.quality) {
                     track.amazonMusicQualitySelected = resolvedStreamInfo.quality;

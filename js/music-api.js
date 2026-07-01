@@ -165,9 +165,24 @@ export class MusicAPI {
             if (track.artist?.id && !artistMap.has(track.artist.id)) {
                 artistMap.set(track.artist.id, {
                     ...track.artist,
-                    picture: track.artist.picture || track.artist.image || track.artist.cover || track.album?.cover || track.cover,
-                    image: track.artist.image || track.artist.picture || track.artist.cover || track.album?.cover || track.cover,
-                    cover: track.artist.cover || track.artist.picture || track.artist.image || track.album?.cover || track.cover,
+                    picture:
+                        track.artist.picture ||
+                        track.artist.image ||
+                        track.artist.cover ||
+                        track.album?.cover ||
+                        track.cover,
+                    image:
+                        track.artist.image ||
+                        track.artist.picture ||
+                        track.artist.cover ||
+                        track.album?.cover ||
+                        track.cover,
+                    cover:
+                        track.artist.cover ||
+                        track.artist.picture ||
+                        track.artist.image ||
+                        track.album?.cover ||
+                        track.cover,
                 });
             }
             for (const artist of track.artists || []) {

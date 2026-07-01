@@ -94,9 +94,7 @@ class SmartRecommendations {
         const dislikedArtistIds = new Set(listeningTracker.getDislikedArtistIds());
         const topArtists = listeningTracker.getTopArtists(30);
         const topArtistIds = new Set(topArtists.map((a) => a.id));
-        const topArtistNames = new Map(
-            topArtists.map((a) => [this._normalizeArtistName(a.name), a])
-        );
+        const topArtistNames = new Map(topArtists.map((a) => [this._normalizeArtistName(a.name), a]));
 
         if (track.artist?.id && topArtistIds.has(String(track.artist.id))) {
             const artist = topArtists.find((a) => a.id === String(track.artist.id));

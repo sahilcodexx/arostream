@@ -101,7 +101,10 @@ function getThumbnailUrl(thumbnails, fallbackId = null) {
     const best = list
         .map((thumb) => (typeof thumb === 'string' ? { url: thumb } : thumb))
         .filter((thumb) => thumb?.url)
-        .sort((a, b) => (Number(b.width) || 0) * (Number(b.height) || 0) - (Number(a.width) || 0) * (Number(a.height) || 0))[0];
+        .sort(
+            (a, b) =>
+                (Number(b.width) || 0) * (Number(b.height) || 0) - (Number(a.width) || 0) * (Number(a.height) || 0)
+        )[0];
 
     const url = best?.url || (fallbackId ? `https://i.ytimg.com/vi/${fallbackId}/maxresdefault.jpg` : null);
     return enhanceYouTubeThumbnail(url, fallbackId);
@@ -113,13 +116,14 @@ function enhanceYouTubeThumbnail(url, fallbackId = null) {
 
     const cleanUrl = String(url).replace(/^http:\/\//, 'https://');
     if (cleanUrl.includes('i.ytimg.com/vi/')) {
-        return cleanUrl.replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)?(?:\?.*)?$/i, '/maxresdefault.jpg');
+        return cleanUrl.replace(
+            /\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)?(?:\?.*)?$/i,
+            '/maxresdefault.jpg'
+        );
     }
 
     if (cleanUrl.includes('yt3.googleusercontent.com')) {
-        return cleanUrl
-            .replace(/=w\d+-h\d+[^&]*/i, '=w640-h640-l90-rj')
-            .replace(/=s\d+[^&]*/i, '=s640');
+        return cleanUrl.replace(/=w\d+-h\d+[^&]*/i, '=w640-h640-l90-rj').replace(/=s\d+[^&]*/i, '=s640');
     }
 
     return cleanUrl;
@@ -170,11 +174,7 @@ function mapVideoToTrack(video) {
         video.basic_info?.title ||
         'Unknown Track';
 
-    const artist =
-        video.author?.name ||
-        video.artists?.[0]?.name ||
-        video.basic_info?.author ||
-        'Unknown Artist';
+    const artist = video.author?.name || video.artists?.[0]?.name || video.basic_info?.author || 'Unknown Artist';
 
     const thumbnail = getThumbnailUrl(video.thumbnails || video.basic_info?.thumbnail || video.best_thumbnail, id);
     const duration = video.duration?.seconds || video.duration || 0;
@@ -394,7 +394,10 @@ async function getStreamViaYtdlp(videoId) {
             ['-f', 'ba', '--get-url', '--no-playlist', '--no-warnings', watchUrl],
             { timeout: 30000, maxBuffer: 1024 * 1024 }
         );
-        const url = stdout.trim().split('\n').find((line) => line.startsWith('http'));
+        const url = stdout
+            .trim()
+            .split('\n')
+            .find((line) => line.startsWith('http'));
         if (!url) return null;
         return { url, mimeType: mimeFromStreamUrl(url), source: 'ytdlp' };
     } catch (err) {
