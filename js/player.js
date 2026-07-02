@@ -60,6 +60,7 @@ export class Player {
         this.userVolume = parseFloat(localStorage.getItem('volume') || '0.7');
         this.isFallbackRetry = false;
         this.isFallbackInProgress = false;
+        this.youtubePlaybackFailureInProgress = false;
         this.autoplayBlocked = false;
         this.isIOS = isIos;
         this.isPwa =
@@ -1594,7 +1595,43 @@ export class Player {
                 return;
             }
 
+            if (await this.handleCurrentTrackPlaybackFailure(error, track)) return;
+
             console.error(`Could not play track: ${trackTitle}`, error);
+        }
+    }
+
+    async handleCurrentTrackPlaybackFailure(error, failedTrack = this.currentTrack) {
+        const failedId = failedTrack?.id || this.currentTrack?.id;
+        if (!failedId?.startsWith?.('yt:')) return false;
+        if (this.youtubePlaybackFailureInProgress) return true;
+
+        this.youtubePlaybackFailureInProgress = true;
+        try {
+            console.warn('Skipping unavailable YouTube track:', failedTrack?.title || failedTrack?.name || failedId, error);
+
+            for (const queue of [this.queue, this.shuffledQueue]) {
+                const item = queue.find((track) => track?.id === failedId);
+                if (item) {
+                    item.isUnavailable = true;
+                    item._playbackFailed = true;
+                }
+            }
+
+            this.preloadCache.delete(failedId);
+            const element = this.activeElement;
+            if (element?.src) {
+                element.pause();
+                element.removeAttribute('src');
+                element.load();
+            }
+
+            await this.saveQueueState().catch(() => {});
+            if (window.renderQueueFunction) await window.renderQueueFunction();
+            await this.playNext(0);
+            return true;
+        } finally {
+            this.youtubePlaybackFailureInProgress = false;
         }
     }
 

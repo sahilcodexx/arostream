@@ -1,7 +1,13 @@
 import http from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { searchYouTube, getYouTubeTrack, getYouTubeStream, getYouTubeRelatedTracks } from './youtube-handler.mjs';
+import {
+    searchYouTube,
+    getYouTubeTrack,
+    getYouTubeStream,
+    getYouTubeRelatedTracks,
+    clearYouTubeStreamCache,
+} from './youtube-handler.mjs';
 
 const PORT = Number(process.env.YOUTUBE_API_PORT || 8787);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
@@ -24,16 +30,9 @@ function sendJson(res, status, data) {
     res.end(JSON.stringify(data));
 }
 
-async function proxyAudioPlayback(videoId, req, res) {
+async function openUpstreamStream(videoId, req, abort) {
     const stream = await getYouTubeStream(videoId);
-    if (stream.error) {
-        sendJson(res, 404, stream);
-        return;
-    }
-
-    const abort = new AbortController();
-    const onClose = () => abort.abort();
-    req.on('close', onClose);
+    if (stream.error) return { stream, upstream: null };
 
     const upstreamHeaders = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -41,9 +40,24 @@ async function proxyAudioPlayback(videoId, req, res) {
         Range: req.headers.range || 'bytes=0-',
     };
 
+    const upstream = await fetch(stream.url, { headers: upstreamHeaders, signal: abort.signal });
+    return { stream, upstream };
+}
+
+async function proxyAudioPlayback(videoId, req, res) {
+    const abort = new AbortController();
+    const onClose = () => abort.abort();
+    req.on('close', onClose);
+
+    let stream;
     let upstream;
     try {
-        upstream = await fetch(stream.url, { headers: upstreamHeaders, signal: abort.signal });
+        ({ stream, upstream } = await openUpstreamStream(videoId, req, abort));
+
+        if ((!upstream?.ok || !upstream?.body) && upstream?.status && [403, 404, 410, 416].includes(upstream.status)) {
+            clearYouTubeStreamCache(videoId);
+            ({ stream, upstream } = await openUpstreamStream(videoId, req, abort));
+        }
     } catch (err) {
         req.off('close', onClose);
         if (err.name === 'AbortError' || abort.signal.aborted) return;
@@ -51,10 +65,16 @@ async function proxyAudioPlayback(videoId, req, res) {
         return;
     }
 
-    if (!upstream.ok || !upstream.body) {
+    if (stream?.error) {
+        req.off('close', onClose);
+        sendJson(res, 503, stream);
+        return;
+    }
+
+    if (!upstream?.ok || !upstream.body) {
         req.off('close', onClose);
         if (!res.headersSent) {
-            sendJson(res, upstream.status || 502, { error: `upstream ${upstream.status}` });
+            sendJson(res, upstream?.status || 502, { error: `upstream ${upstream?.status || 'fetch failed'}` });
         }
         return;
     }
@@ -109,7 +129,10 @@ const server = http.createServer(async (req, res) => {
                 sendJson(res, 400, { error: 'missing query param q' });
                 return;
             }
-            const result = await searchYouTube(query.trim(), limit);
+            const result = await searchYouTube(query.trim(), limit).catch((err) => {
+                console.warn('YouTube search route failed:', err.message);
+                return { items: [], total: 0 };
+            });
             sendJson(res, 200, result);
             return;
         }
@@ -129,7 +152,7 @@ const server = http.createServer(async (req, res) => {
         if (streamMatch && req.method === 'GET') {
             const stream = await getYouTubeStream(streamMatch[1]);
             if (stream.error) {
-                sendJson(res, 404, stream);
+                sendJson(res, 503, stream);
                 return;
             }
             sendJson(res, 200, stream);
@@ -150,7 +173,10 @@ const server = http.createServer(async (req, res) => {
         const relatedMatch = url.pathname.match(/^\/related\/([a-zA-Z0-9_-]{11})$/);
         if (relatedMatch && req.method === 'GET') {
             const limit = Math.min(Number(url.searchParams.get('limit') || 20), 50);
-            const result = await getYouTubeRelatedTracks(relatedMatch[1], limit);
+            const result = await getYouTubeRelatedTracks(relatedMatch[1], limit).catch((err) => {
+                console.warn('YouTube related route failed:', err.message);
+                return { items: [], total: 0 };
+            });
             sendJson(res, 200, result);
             return;
         }

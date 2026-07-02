@@ -10,9 +10,9 @@ function extractVideoId(urlOrId) {
     return match ? match[1] : null;
 }
 
-async function fetchBackend(path) {
+async function fetchBackend(path, timeoutMs = FETCH_TIMEOUT) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const response = await fetch(`${API_BASE}${path}`, { signal: controller.signal });
         clearTimeout(timeout);
@@ -82,12 +82,39 @@ export class YouTubeMusicAPI {
             return { url: null, provider: 'youtube', playbackType: 'direct', error: 'no id' };
         }
 
-        return {
-            url: `${API_BASE}/play/${videoId}`,
-            provider: 'youtube',
-            playbackType: 'direct',
-            mimeType: 'audio/webm',
-        };
+        try {
+            const stream = await fetchBackend(`/stream/${videoId}`, 40000);
+            if (stream.error) {
+                return {
+                    url: null,
+                    provider: 'youtube',
+                    playbackType: 'direct',
+                    error: stream.error,
+                };
+            }
+
+            this.streamUrlCache.set(videoId, stream);
+            return {
+                url: `${API_BASE}/play/${videoId}`,
+                provider: 'youtube',
+                playbackType: 'direct',
+                mimeType: stream.mimeType || 'audio/mp4',
+                source: stream.source,
+            };
+        } catch (err) {
+            console.warn('YouTube stream preflight failed:', err.message);
+            return {
+                url: null,
+                provider: 'youtube',
+                playbackType: 'direct',
+                error: err.message || 'YouTube stream unavailable',
+            };
+        }
+    }
+
+    clearStreamCache(id) {
+        const videoId = extractVideoId(id);
+        if (videoId) this.streamUrlCache.delete(videoId);
     }
 
     getCoverUrl(id) {

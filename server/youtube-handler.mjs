@@ -39,6 +39,11 @@ function getCachedStream(videoId) {
     return entry.stream;
 }
 
+export function clearYouTubeStreamCache(videoId) {
+    streamCache.delete(videoId);
+    streamInflight.delete(videoId);
+}
+
 function cacheStream(videoId, stream) {
     if (!stream || stream.error) return;
     streamCache.set(videoId, { stream, expiresAt: Date.now() + STREAM_CACHE_TTL_MS });
@@ -188,7 +193,6 @@ function isLikelySong(track) {
 }
 
 export async function searchYouTube(query, limit = 20) {
-    const yt = await getInnertube();
     const items = [];
     const seen = new Set();
 
@@ -200,6 +204,7 @@ export async function searchYouTube(query, limit = 20) {
     };
 
     try {
+        const yt = await getInnertube();
         const musicSearch = await yt.music.search(query, { type: 'song' });
         for (const item of musicSearch.songs?.contents || []) {
             addTrack(mapMusicItemToTrack(item));
@@ -211,6 +216,7 @@ export async function searchYouTube(query, limit = 20) {
 
     if (items.length < limit) {
         try {
+            const yt = await getInnertube();
             const search = await yt.search(query, { type: 'SONG' });
             for (const result of search.results || []) {
                 if (result.type === 'Song' || result.type === 'Video') {
@@ -407,11 +413,16 @@ async function getStreamViaYtdlp(videoId) {
 }
 
 async function getStreamViaInnertube(videoId) {
-    const yt = await getInnertube();
-    const info = await yt.getInfo(videoId, { client: 'IOS' });
-    const format = info.chooseFormat({ type: 'audio', quality: 'best' });
-    if (!format?.url) return null;
-    return { url: format.url, mimeType: format.mime_type || 'audio/mp4', source: 'innertube' };
+    try {
+        const yt = await getInnertube();
+        const info = await withTimeout(yt.getInfo(videoId, { client: 'IOS' }), 15000, 'Innertube stream timed out');
+        const format = info.chooseFormat({ type: 'audio', quality: 'best' });
+        if (!format?.url) return null;
+        return { url: format.url, mimeType: format.mime_type || 'audio/mp4', source: 'innertube' };
+    } catch (err) {
+        console.warn('Innertube stream failed:', err.message);
+        return null;
+    }
 }
 
 async function getStreamViaPiped(videoId) {
@@ -439,7 +450,7 @@ async function resolveYouTubeStream(videoId) {
     let stream = await getStreamViaYtdlp(videoId);
     if (!stream) stream = await getStreamViaInnertube(videoId);
     if (!stream) stream = await getStreamViaPiped(videoId);
-    if (!stream) return { error: 'no stream url' };
+    if (!stream) return { error: 'No playable YouTube stream found', retryable: true };
 
     cacheStream(videoId, stream);
     return stream;

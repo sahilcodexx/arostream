@@ -540,6 +540,8 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
                 if (player.isFallbackInProgress || canFallback) {
                     return;
                 }
+
+                void player.handleCurrentTrackPlaybackFailure(errorMsg).catch(console.error);
             }
         });
 
