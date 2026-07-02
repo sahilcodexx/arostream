@@ -7,8 +7,8 @@ describe('Amazon Music playback metadata', () => {
 
     test('uses MP4 codec identifiers in generated DASH metadata', () => {
         expect(api.getAmazonCodecString('flac')).toBe('fLaC');
-        expect(api.getAmazonCodecString('aac')).toBe('mp4a.40.2');
-        expect(api.getAmazonCodecString('eac3')).toBe('ec-3');
+        expect(api.getAmazonCodecString('aac')).toBe('aac');
+        expect(api.getAmazonCodecString('eac3')).toBe('eac3');
     });
 
     test('uses the normalized codec in Amazon MIME types and manifests', () => {
@@ -58,9 +58,33 @@ describe('Amazon Music source selection', () => {
         vi.restoreAllMocks();
     });
 
-    test('tries Amazon first when the 50/50 playback roll prefers Amazon', async () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.75);
+    test('tries Qobuz first when it resolves a stream URL', async () => {
         const calls = [];
+        api.getQobuzStreamUrl = vi.fn(() => {
+            calls.push('qobuz');
+            return Promise.resolve({ url: 'https://qobuz.example/audio.flac', rgInfo: null });
+        });
+        api.getAmazonMusicStreamUrl = vi.fn(() => {
+            calls.push('amazon');
+            return Promise.resolve({
+                url: 'https://amazon.example/audio.mp4',
+                sourceUrl: 'https://amazon.example/audio.mp4',
+                provider: 'amazon',
+            });
+        });
+
+        const result = await api.getStreamUrl('71513806', 'LOSSLESS');
+
+        expect(result.provider).toBe('qobuz');
+        expect(calls).toEqual(['qobuz']);
+    });
+
+    test('falls back to Amazon when Qobuz cannot resolve a stream', async () => {
+        const calls = [];
+        api.getQobuzStreamUrl = vi.fn(() => {
+            calls.push('qobuz');
+            return Promise.resolve(null);
+        });
         api.getAmazonMusicStreamUrl = vi.fn(() => {
             calls.push('amazon');
             return Promise.resolve({
@@ -72,77 +96,42 @@ describe('Amazon Music source selection', () => {
                 qualityDisplay: 'FLAC',
             });
         });
-        api.getQobuzStreamUrl = vi.fn(() => {
-            calls.push('qobuz');
-            return Promise.resolve({ url: 'https://qobuz.example/audio.flac' });
-        });
-
-        const result = await api.getStreamUrl('71513806', 'LOSSLESS');
-
-        expect(result.provider).toBe('amazon');
-        expect(calls).toEqual(['amazon']);
-    });
-
-    test('tries Qobuz first when the 50/50 playback roll prefers Qobuz', async () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.25);
-        const calls = [];
-        api.getAmazonMusicStreamUrl = vi.fn(() => {
-            calls.push('amazon');
-            return Promise.resolve({
-                url: 'https://amazon.example/audio.mp4',
-                sourceUrl: 'https://amazon.example/audio.mp4',
-                provider: 'amazon',
-            });
-        });
-        api.getQobuzStreamUrl = vi.fn(() => {
-            calls.push('qobuz');
-            return Promise.resolve({ url: 'https://qobuz.example/audio.flac', rgInfo: null });
-        });
-
-        const result = await api.getStreamUrl('71513806', 'LOSSLESS');
-
-        expect(result.provider).toBe('qobuz');
-        expect(calls).toEqual(['qobuz']);
-    });
-
-    test('falls back to Qobuz when Amazon is preferred but cannot resolve a stream', async () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.75);
-        const calls = [];
-        api.getAmazonMusicStreamUrl = vi.fn(() => {
-            calls.push('amazon');
-            return Promise.resolve(null);
-        });
-        api.getQobuzStreamUrl = vi.fn(() => {
-            calls.push('qobuz');
-            return Promise.resolve({ url: 'https://qobuz.example/audio.flac', rgInfo: null });
-        });
-
-        const result = await api.getStreamUrl('71513806', 'LOSSLESS');
-
-        expect(result.provider).toBe('qobuz');
-        expect(calls).toEqual(['amazon', 'qobuz']);
-    });
-
-    test('falls back to Amazon when Qobuz is preferred but cannot resolve a stream', async () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.25);
-        const calls = [];
-        api.getAmazonMusicStreamUrl = vi.fn(() => {
-            calls.push('amazon');
-            return Promise.resolve({
-                url: 'https://amazon.example/audio.mp4',
-                sourceUrl: 'https://amazon.example/audio.mp4',
-                provider: 'amazon',
-            });
-        });
-        api.getQobuzStreamUrl = vi.fn(() => {
-            calls.push('qobuz');
-            return Promise.resolve(null);
-        });
 
         const result = await api.getStreamUrl('71513806', 'LOSSLESS');
 
         expect(result.provider).toBe('amazon');
         expect(calls).toEqual(['qobuz', 'amazon']);
+    });
+
+    test('falls back to Deezer when neither Qobuz nor Amazon can resolve a stream', async () => {
+        const calls = [];
+        api.getQobuzStreamUrl = vi.fn(() => {
+            calls.push('qobuz');
+            return Promise.resolve(null);
+        });
+        api.getAmazonMusicStreamUrl = vi.fn(() => {
+            calls.push('amazon');
+            return Promise.resolve(null);
+        });
+        api.getDeezerStreamUrl = vi.fn(() => {
+            calls.push('deezer');
+            return Promise.resolve({ url: 'https://deezer.example/audio.flac', rgInfo: null });
+        });
+
+        const result = await api.getStreamUrl('71513806', 'LOSSLESS');
+
+        expect(result.provider).toBe('deezer');
+        expect(calls).toEqual(['qobuz', 'amazon', 'deezer']);
+    });
+
+    test('throws when no provider can resolve a stream', async () => {
+        api.getQobuzStreamUrl = vi.fn(() => Promise.resolve(null));
+        api.getAmazonMusicStreamUrl = vi.fn(() => Promise.resolve(null));
+        api.getDeezerStreamUrl = vi.fn(() => Promise.resolve(null));
+
+        await expect(api.getStreamUrl('71513806', 'LOSSLESS')).rejects.toThrow(
+            'Could not resolve stream URL from Amazon Music, Qobuz, or Deezer'
+        );
     });
 });
 
