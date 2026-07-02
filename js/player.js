@@ -1608,7 +1608,11 @@ export class Player {
 
         this.youtubePlaybackFailureInProgress = true;
         try {
-            console.warn('Skipping unavailable YouTube track:', failedTrack?.title || failedTrack?.name || failedId, error);
+            console.warn(
+                'Skipping unavailable YouTube track:',
+                failedTrack?.title || failedTrack?.name || failedId,
+                error
+            );
 
             for (const queue of [this.queue, this.shuffledQueue]) {
                 const item = queue.find((track) => track?.id === failedId);
