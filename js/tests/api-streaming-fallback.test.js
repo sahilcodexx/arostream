@@ -41,7 +41,12 @@ vi.mock('../HiFi.ts', () => ({
     HiFiClient: { instance: { query: vi.fn() } },
     TidalResponse: class {},
 }));
-vi.mock('../platform-detection.js', () => ({ isIos: false, isSafari: false, isChrome: true, canUseNativeAmazonCenc: true }));
+vi.mock('../platform-detection.js', () => ({
+    isIos: false,
+    isSafari: false,
+    isChrome: true,
+    canUseNativeAmazonCenc: true,
+}));
 vi.mock('../container-classes.js', () => ({
     TrackAlbum: class {},
     EnrichedAlbum: class {},
