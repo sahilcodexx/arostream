@@ -5224,159 +5224,87 @@ input:checked + .slider::before {
 }
 
 .about-content {
-    padding: 2rem 0;
-    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 3rem 1.5rem;
+    max-width: 600px;
     margin: 0 auto;
-}
-
-.about-donate {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 2rem;
-    margin: 2rem 0;
     text-align: center;
 }
 
-.about-donate .section-title {
-    margin-bottom: 1rem;
-}
-
-.donate-description {
-    color: var(--muted-foreground);
-    line-height: 1.6;
-}
-
-.about-donate .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.95rem;
-}
-
-.about-description {
-    color: var(--foreground);
-    line-height: 1.8;
-    margin-bottom: 1.5rem;
-    font-size: 1.05rem;
-}
-
-.about-features,
-.about-tech {
+.about-header {
     margin-bottom: 2rem;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
 }
 
-.about-features h4,
-.about-tech h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--foreground);
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
+.about-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--foreground), var(--highlight));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.about-features ul {
-    list-style: none;
-    padding: 0;
-}
-
-.about-features li {
-    padding: 0.5rem 0 0.5rem 1.5rem;
-    position: relative;
-    color: var(--foreground);
-    line-height: 1.5;
-}
-
-.about-features li::before {
-    content: '✓';
-    position: absolute;
-    left: 0;
-    color: var(--highlight);
-    font-weight: bold;
-    transition: transform var(--transition-spring);
-}
-
-.about-features li:hover::before {
-    transform: scale(1.3) rotate(15deg);
-}
-
-.about-features li:hover {
-    color: var(--highlight);
-    transform: translateX(4px);
-    transition:
-        transform var(--transition-fast),
-        color var(--transition-fast);
-}
-
-.about-tech p {
+.about-tagline {
+    font-size: 1.1rem;
     color: var(--muted-foreground);
-    font-size: 0.9rem;
+}
+
+.about-body {
+    line-height: 1.8;
+    color: var(--foreground);
+    margin-bottom: 2rem;
+}
+
+.about-body p {
+    margin-bottom: 1.5rem;
 }
 
 .about-links {
     display: flex;
     gap: 1rem;
-    margin: 1.5rem 0;
-    flex-wrap: wrap;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
-.github-link {
+.about-links a {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    background-color: var(--card);
+    padding: 0.75rem 1.5rem;
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--foreground);
     font-weight: 500;
+    text-decoration: none;
     transition: all var(--transition);
 }
 
-.github-link:hover {
-    background-color: var(--secondary);
+.about-links a:hover {
     border-color: var(--highlight);
     transform: translateY(-2px);
 }
 
-.github-link svg {
-    flex-shrink: 0;
-}
-
 .about-footer {
-    margin-top: 3rem;
-    padding-top: 2rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
     border-top: 1px solid var(--border);
     text-align: center;
+    width: 100%;
 }
 
 .about-footer p {
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
+    margin: 0.3rem 0;
+    font-size: 0.85rem;
 }
 
 .about-footer .version {
-    color: var(--foreground);
-    font-weight: 600;
-}
-
-.about-footer .license {
     color: var(--muted-foreground);
-}
-
-.about-footer .disclaimer {
-    color: var(--muted-foreground);
-    font-size: 0.8rem;
-    font-style: italic;
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background-color: var(--secondary);
-    border-radius: var(--radius);
-    border-left: 3px solid var(--muted-foreground);
 }
 
 #download-notifications {
@@ -7221,9 +7149,10 @@ img[src=''] {
 
     .about-links {
         flex-direction: column;
+        width: 100%;
     }
 
-    .github-link {
+    .about-links a {
         width: 100%;
         justify-content: center;
     }
@@ -10613,90 +10542,6 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
 }
 
 /* FUCK FLEX FUCK CSS FUCKKKKK */
-.about-contributors {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
-}
-
-.about-contributors div {
-    width: calc(20% - 10px);
-    min-width: 150px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    text-align: center;
-    overflow: hidden;
-    background: var(--card);
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease;
-}
-
-.about-contributors div:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-}
-
-.about-contributors a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    color: inherit;
-}
-
-.about-contributors img {
-    display: block;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.about-contributors span {
-    color: var(--foreground);
-    font-weight: 500;
-    font-size: 14px;
-    line-height: 1.2;
-    display: block;
-    word-break: break-word;
-}
-
-.about-contributors .contrib {
-    color: var(--muted-foreground);
-    font-size: 12px;
-    font-weight: 400;
-}
-
-@media (max-width: 768px) {
-    .about-contributors div {
-        width: calc(33.33% - 12px);
-        padding: 15px;
-    }
-}
-
-@media (max-width: 480px) {
-    .about-contributors {
-        gap: 8px;
-    }
-
-    .about-contributors div {
-        width: calc(50% - 8px);
-        min-width: 0;
-        padding: 12px;
-    }
-
-    .about-contributors span {
-        font-size: 13px;
-    }
-
-    .about-contributors .contrib {
-        font-size: 11px;
-    }
-}
-
 /* Fullscreen layout rebuild on PR 378 base */
 #fullscreen-cover-overlay .fullscreen-shell {
     width: 100%;

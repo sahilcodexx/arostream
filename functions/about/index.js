@@ -14,23 +14,23 @@ export async function onRequest(context) {
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <title>Monochrome Music | About</title>
-                <meta name="description" content="A minimalist music streaming application">
+                <title>Arostream | About</title>
+                <meta name="description" content="Free, open-source music streaming. No ads. No tracking.">
                 <meta name="theme-color" content="#000000">
 
-                <meta property="og:site_name" content="Monochrome">
-                <meta property="og:title" content="Monochrome Music | About">
-                <meta property="og:description" content="A minimalist music streaming application">
+                <meta property="og:site_name" content="Arostream">
+                <meta property="og:title" content="Arostream | About">
+                <meta property="og:description" content="Free, open-source music streaming. No ads. No tracking.">
                 <meta property="og:type" content="website">
                 <meta property="og:url" content="${pageUrl}">
 
                 <meta name="twitter:card" content="summary">
-                <meta name="twitter:title" content="Monochrome Music | About">
-                <meta name="twitter:description" content="A minimalist music streaming application">
+                <meta name="twitter:title" content="Arostream | About">
+                <meta name="twitter:description" content="Free, open-source music streaming. No ads. No tracking.">
             </head>
             <body>
-                <h1>Monochrome Music | About</h1>
-                <p>A minimalist music streaming application</p>
+                <h1>Arostream</h1>
+                <p>Free, open-source music streaming. No ads. No tracking.</p>
             </body>
             </html>
         `;

@@ -108,59 +108,6 @@ async function loadDownloadsModule() {
     return downloadsModule;
 }
 
-let contributorsLoaded = false;
-
-async function fetchcontributors() {
-    if (contributorsLoaded) return;
-    contributorsLoaded = true;
-    try {
-        const response = await fetch('https://api.samidy.com/api/contributors');
-        if (!response.ok) {
-            contributorsLoaded = false;
-            return;
-        }
-        const data1 = await response.json();
-        if (!Array.isArray(data1)) {
-            contributorsLoaded = false;
-            return;
-        }
-
-        let data = data1.filter(
-            (user) => user.type !== 'Bot' && user.login !== 'edidealt' && user.login !== 'satanyahoo'
-        );
-
-        const edideaur = data.find((user) => user.login === 'edideaur');
-        if (edideaur) {
-            edideaur.contributions += data1.find((u) => u.login === 'edidealt')?.contributions || 0;
-            edideaur.contributions += data1.find((u) => u.login === 'satanyahoo')?.contributions || 0;
-        }
-
-        data.sort((a, b) => b.contributions - a.contributions);
-
-        const con = document.querySelector('.about-contributors');
-        if (!con) return;
-
-        data.forEach((user) => {
-            const userDIV = document.createElement('div');
-            userDIV.innerHTML = `
-            <a href="${user.html_url}" target="_blank">
-            <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${user.avatar_url}&s=50" alt="${user.login}" width="50" height="50" style="border-radius: 50%;" loading="lazy">
-            <span>${user.login}</span>
-            <span class="contrib">Contributions: ${user.contributions}</span>
-            </a>
-            `;
-            con.appendChild(userDIV);
-        });
-    } catch (e) {
-        contributorsLoaded = false;
-        const con = document.querySelector('.about-contributors-failed');
-        if (!con) return;
-        con.innerHTML = `
-        <h4 style="text-align: center; color: var(--muted-foreground);">Failed to Fetch Contributor List</h4>
-        `;
-    }
-}
-
 async function loadMetadataModule() {
     if (!metadataModule) {
         metadataModule = await import('./metadata.js');
@@ -2725,9 +2672,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             await router();
-            if (window.location.pathname.replace(/\/+$/, '') === '/about') {
-                fetchcontributors();
-            }
             updateTabTitle(Player.instance);
         } finally {
             routeInFlight = false;
