@@ -40,11 +40,13 @@
 ## Features
 
 ### Audio Quality
+
 - High-quality audio streaming via YouTube
 - Support for local music files
 - API caching for improved performance
 
 ### Interface
+
 - Dark, minimalist interface optimized for focus
 - Animated Album Covers For Supported Albums
 - Customizable themes & Community Theme Store
@@ -53,6 +55,7 @@
 - Media Session API integration for system controls
 
 ### Library & Organization
+
 - Recently Played tracking for easy history access
 - Comprehensive Personal Library for favorites
 - Queue management with shuffle and repeat modes
@@ -64,11 +67,13 @@
 - Explore Page (Hot & New) for discovering newly added music and whats trending overall or within each genre
 
 ### Lyrics & Metadata
+
 - Lyrics support with karaoke mode
 - Genius integration for lyrics
 - Track downloads with automatic metadata embedding
 
 ### Integrations
+
 - Account system for cross-device syncing
 - Customizable & Public Profiles
 - Real-time Listening Parties for synced playback with friends
@@ -80,6 +85,7 @@
 - Multiple API instance support with failover
 
 ### Power User Features
+
 - Keyboard shortcuts & Command Palette (CTRL+K) for power users
 
 ---
@@ -139,10 +145,12 @@ For development mode and advanced setups, see [DOCKER.md](DOCKER.md).
 ### Option 2: Manual Installation
 
 #### Prerequisites
+
 - [Bun](https://bun.sh/) (Preferred) or [Node.js](https://nodejs.org/) (Version 20+ or 22+ recommended)
 - [Git](https://git-scm.com/)
 
 #### PocketBase Schema
+
 The current PocketBase collection schema is stored in [`database/pb_schema.json`](database/pb_schema.json). Import this schema into a fresh PocketBase instance when setting up account data storage.
 
 #### Local Development
@@ -186,6 +194,7 @@ npm run build
 ## Usage
 
 ### Basic Usage
+
 1. Visit the website or your local development server
 2. Search for your favorite artists, albums, or tracks
 3. Click play to start streaming
@@ -215,7 +224,9 @@ npm run build
 | `Ctrl` + `K`  | Command Palette              |
 
 ### Account Features
+
 To sync your library, history, and playlists across devices:
+
 1. Click the "Accounts" Section
 2. Sign in with Google or Email
 3. Your data will automatically sync across all devices
@@ -225,6 +236,7 @@ To sync your library, history, and playlists across devices:
 ## Contributing
 
 We welcome contributions from the community! Please see our [Contributing Guide](CONTRIBUTING.md) for:
+
 - Setting up your development environment
 - Code style and linting
 - Project structure
