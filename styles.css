@@ -5244,7 +5244,7 @@ input:checked + .slider::before {
     font-weight: 700;
     margin-bottom: 0.5rem;
     background: linear-gradient(135deg, var(--foreground), var(--highlight));
-    -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
@@ -10542,6 +10542,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
 }
 
 /* FUCK FLEX FUCK CSS FUCKKKKK */
+
 /* Fullscreen layout rebuild on PR 378 base */
 #fullscreen-cover-overlay .fullscreen-shell {
     width: 100%;
