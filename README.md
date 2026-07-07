@@ -1,21 +1,6 @@
-<p align="center">
-  <a href="https://monochrome.tf">
-    <img src="https://github.com/monochrome-music/monochrome/blob/main/public/assets/512.png?raw=true" alt="Arostream Logo" width="150px">
-  </a>
-</p>
+# Arostream
 
-<h1 align="center">Arostream</h1>
-
-<p align="center">
-  <strong>Stream and download millions of Hi-Res FLACs, unreleased songs and music videos, all for free.</strong>
-</p>
-
-<p align="center">
-  <a href="https://github.com/sahilcodexx/arostream#features">Features</a> -
-  <a href="https://github.com/sahilcodexx/arostream#usage">Usage</a> -
-  <a href="https://github.com/sahilcodexx/arostream#self-hosting">Self-Hosting</a> -
-  <a href="CONTRIBUTING.md">Contributing</a>
-</p>
+A privacy-respecting, open-source music streaming web interface built on YouTube's API. Stream high-fidelity audio without ads or tracking.
 
 <p align="center">
   <a href="https://github.com/sahilcodexx/arostream/stargazers">
@@ -31,80 +16,68 @@
 
 ---
 
-## What is Arostream?
-
-**Arostream** is an open-source, privacy-respecting, ad-free music streaming web UI, built on top of YouTube's API. It provides a beautiful, minimalist interface for streaming high-quality music without the clutter of traditional streaming platforms.
-
----
-
 ## Features
 
 ### Audio Quality
-
-- High-quality audio streaming via YouTube
-- Support for local music files
+- High-fidelity audio streaming via YouTube
+- Local music file support
 - API caching for improved performance
 
 ### Interface
-
-- Dark, minimalist interface optimized for focus
-- Animated Album Covers For Supported Albums
-- Customizable themes & Community Theme Store
-- Accurate and unique audio visualizer
+- Dark, minimalist design optimized for focus
+- Animated album covers for supported releases
+- Customizable themes with community theme store
+- Built-in audio visualizer
 - Offline-capable Progressive Web App (PWA)
-- Media Session API integration for system controls
+- Media Session API integration for system playback controls
 
-### Library & Organization
-
-- Recently Played tracking for easy history access
-- Comprehensive Personal Library for favorites
+### Library and Organization
+- Recently Played tracking
+- Personal library for favorites
 - Queue management with shuffle and repeat modes
-- Native Podcast support & organization
-- Playlist import from other platforms
-- Public playlists for social sharing
-- Smart recommendations for new songs, albums & artists
-- Infinite Recommendation Radio
-- Explore Page (Hot & New) for discovering newly added music and whats trending overall or within each genre
+- Native podcast support
+- Playlist import from external platforms
+- Public playlists for sharing
+- Smart recommendations for songs, albums, and artists
+- Infinite recommendation radio
+- Explore page for discovering new and trending music
 
-### Lyrics & Metadata
-
-- Lyrics support with karaoke mode
-- Genius integration for lyrics
+### Lyrics and Metadata
+- Synced lyrics with karaoke mode
+- Genius integration
 - Track downloads with automatic metadata embedding
 
 ### Integrations
-
 - Account system for cross-device syncing
-- Customizable & Public Profiles
-- Real-time Listening Parties for synced playback with friends
-- Last.fm and ListenBrainz integration for scrobbling
+- Customizable public profiles
+- Real-time listening parties for synced playback with friends
+- Last.fm and ListenBrainz scrobbling
 - OAuth support (Google, Discord, GitHub, Spotify)
-- Unreleased music from [ArtistGrid](https://artistgrid.cx)
-- Dynamic Discord Embeds
-- Artist Biography + Social Links for learning more about your favorite artists
-- Multiple API instance support with failover
+- Unreleased music from ArtistGrid
+- Dynamic Discord embeds
+- Artist biographies and social links
+- Multiple API instance support with automatic failover
 
 ### Power User Features
-
-- Keyboard shortcuts & Command Palette (CTRL+K) for power users
+- Keyboard shortcuts and command palette (Ctrl+K)
 
 ---
 
 ## Quick Start
 
-### Live Instance
+### Official Instance
 
-Our Recommended way to use Arostream is through our official instance:
+The recommended way to use Arostream is through the official hosted instance:
 
 **[monochrome.tf](https://monochrome.tf)** / **[monochrome.samidy.com](https://monochrome.samidy.com)**
 
-For alternative instances, check [INSTANCES.md](INSTANCES.md).
+For community-hosted alternatives, see [INSTANCES.md](INSTANCES.md).
 
 ---
 
 ## Self-Hosting
 
-NOTE: Accounts will not work on self-hosted instances. Our Appwrite authentication system only allows authorized domains.
+> Note: Accounts will not work on self-hosted instances. The authentication system is restricted to authorized domains.
 
 ### Option 1: Docker (Recommended)
 
@@ -114,14 +87,11 @@ cd arostream/docker
 docker compose up -d
 ```
 
-Visit `http://localhost:3000`
+The application will be available at `http://localhost:3000`.
 
-### Tailscale Access
+#### Tailscale Access
 
-Visit `http://<tailscale_server_hostname_or_ip>:3000`
-
-By default, the app uses Vite preview, which restricts access to localhost.  
-To allow access over Tailscale:
+To access the instance over Tailscale, the Vite preview server must be configured to allow external hosts:
 
 1. Open `vite.config.js`
 2. Uncomment and configure the `preview` section:
@@ -129,120 +99,88 @@ To allow access over Tailscale:
 ```js
 preview: {
     host: true,
-    allowedHosts: ['<your_tailscale_hostname>'], // e.g. pi5.tailf5f622.ts.net
+    allowedHosts: ['<your_tailscale_hostname>'],
 },
 ```
 
-3. Restart with a fresh container (if already running):
+3. Restart the container:
 
 ```bash
 docker compose down
 docker compose up -d
 ```
 
-For development mode and advanced setups, see [DOCKER.md](DOCKER.md).
+For advanced setups and development mode, see [DOCKER.md](DOCKER.md).
 
 ### Option 2: Manual Installation
 
 #### Prerequisites
 
-- [Bun](https://bun.sh/) (Preferred) or [Node.js](https://nodejs.org/) (Version 20+ or 22+ recommended)
+- [Bun](https://bun.sh/) (recommended) or [Node.js](https://nodejs.org/) 20+ / 22+
 - [Git](https://git-scm.com/)
 
 #### PocketBase Schema
 
-The current PocketBase collection schema is stored in [`database/pb_schema.json`](database/pb_schema.json). Import this schema into a fresh PocketBase instance when setting up account data storage.
+The PocketBase collection schema is located at [`database/pb_schema.json`](database/pb_schema.json). Import this schema into a fresh PocketBase instance for account data storage.
 
 #### Local Development
 
-1. **Clone the repository:**
+```bash
+git clone https://github.com/sahilcodexx/arostream.git
+cd arostream
+bun install
+bun run dev
+```
 
-    ```bash
-    git clone https://github.com/sahilcodexx/arostream.git
-    cd arostream
-    ```
+Navigate to `http://localhost:5173/`.
 
-2. **Install dependencies:**
-
-    ```bash
-    bun install
-    # or
-    npm install
-    ```
-
-3. **Start the development server:**
-
-    ```bash
-    bun run dev
-    # or
-    npm run dev
-    ```
-
-4. **Open your browser:**
-   Navigate to `http://localhost:5173/`
-
-#### Building for Production
+#### Production Build
 
 ```bash
 bun run build
-# or
-npm run build
 ```
 
 ---
 
 ## Usage
 
-### Basic Usage
-
-1. Visit the website or your local development server
-2. Search for your favorite artists, albums, or tracks
-3. Click play to start streaming
-4. Use the media controls to manage playback, queue, and volume
+Search for artists, albums, or tracks and start playback. Use the media controls to manage the queue, volume, and playback state.
 
 ### Keyboard Shortcuts
 
-| Shortcut      | Action                       |
-| ------------- | ---------------------------- |
-| `Space`       | Play / Pause                 |
-| `→`           | Seek forward 10s             |
-| `←`           | Seek backward 10s            |
-| `Shift` + `→` | Next track                   |
-| `Shift` + `←` | Previous track               |
-| `↑`           | Volume up                    |
-| `↓`           | Volume down                  |
-| `M`           | Mute / Unmute                |
-| `S`           | Toggle shuffle               |
-| `R`           | Toggle repeat                |
-| `Q`           | Open queue                   |
-| `L`           | Toggle lyrics                |
-| `/`           | Focus search                 |
-| `Esc`         | Close modals                 |
-| `[`           | Previous visualizer preset   |
-| `]`           | Next visualizer preset       |
-| `\`           | Toggle visualizer auto-cycle |
-| `Ctrl` + `K`  | Command Palette              |
+| Shortcut      | Action                    |
+| ------------- | ------------------------- |
+| `Space`       | Play / Pause              |
+| `Right`       | Seek forward 10s          |
+| `Left`        | Seek backward 10s         |
+| `Shift+Right` | Next track                |
+| `Shift+Left`  | Previous track            |
+| `Up`          | Volume up                 |
+| `Down`        | Volume down               |
+| `M`           | Mute / Unmute             |
+| `S`           | Toggle shuffle            |
+| `R`           | Toggle repeat             |
+| `Q`           | Open queue                |
+| `L`           | Toggle lyrics             |
+| `/`           | Focus search              |
+| `Esc`         | Close modals              |
+| `[` / `]`     | Previous / Next visualizer|
+| `\`           | Toggle visualizer cycling |
+| `Ctrl+K`      | Command palette           |
 
 ### Account Features
 
 To sync your library, history, and playlists across devices:
 
-1. Click the "Accounts" Section
-2. Sign in with Google or Email
-3. Your data will automatically sync across all devices
+1. Navigate to the Accounts section
+2. Sign in with Google, Discord, GitHub, Spotify, or email
+3. Your data will sync automatically across devices
 
 ---
 
 ## Contributing
 
-We welcome contributions from the community! Please see our [Contributing Guide](CONTRIBUTING.md) for:
-
-- Setting up your development environment
-- Code style and linting
-- Project structure
-- Before You Contribute
-- Commit message conventions
-- Deployment information
+Contributions are welcome. See the [Contributing Guide](CONTRIBUTING.md) for setup instructions, code style guidelines, and project structure.
 
 ---
 
