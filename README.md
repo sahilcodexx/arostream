@@ -19,11 +19,13 @@ A privacy-respecting, open-source music streaming web interface built on YouTube
 ## Features
 
 ### Audio Quality
+
 - High-fidelity audio streaming via YouTube
 - Local music file support
 - API caching for improved performance
 
 ### Interface
+
 - Dark, minimalist design optimized for focus
 - Animated album covers for supported releases
 - Customizable themes with community theme store
@@ -32,6 +34,7 @@ A privacy-respecting, open-source music streaming web interface built on YouTube
 - Media Session API integration for system playback controls
 
 ### Library and Organization
+
 - Recently Played tracking
 - Personal library for favorites
 - Queue management with shuffle and repeat modes
@@ -43,11 +46,13 @@ A privacy-respecting, open-source music streaming web interface built on YouTube
 - Explore page for discovering new and trending music
 
 ### Lyrics and Metadata
+
 - Synced lyrics with karaoke mode
 - Genius integration
 - Track downloads with automatic metadata embedding
 
 ### Integrations
+
 - Account system for cross-device syncing
 - Customizable public profiles
 - Real-time listening parties for synced playback with friends
@@ -59,6 +64,7 @@ A privacy-respecting, open-source music streaming web interface built on YouTube
 - Multiple API instance support with automatic failover
 
 ### Power User Features
+
 - Keyboard shortcuts and command palette (Ctrl+K)
 
 ---
@@ -148,25 +154,25 @@ Search for artists, albums, or tracks and start playback. Use the media controls
 
 ### Keyboard Shortcuts
 
-| Shortcut      | Action                    |
-| ------------- | ------------------------- |
-| `Space`       | Play / Pause              |
-| `Right`       | Seek forward 10s          |
-| `Left`        | Seek backward 10s         |
-| `Shift+Right` | Next track                |
-| `Shift+Left`  | Previous track            |
-| `Up`          | Volume up                 |
-| `Down`        | Volume down               |
-| `M`           | Mute / Unmute             |
-| `S`           | Toggle shuffle            |
-| `R`           | Toggle repeat             |
-| `Q`           | Open queue                |
-| `L`           | Toggle lyrics             |
-| `/`           | Focus search              |
-| `Esc`         | Close modals              |
-| `[` / `]`     | Previous / Next visualizer|
-| `\`           | Toggle visualizer cycling |
-| `Ctrl+K`      | Command palette           |
+| Shortcut      | Action                     |
+| ------------- | -------------------------- |
+| `Space`       | Play / Pause               |
+| `Right`       | Seek forward 10s           |
+| `Left`        | Seek backward 10s          |
+| `Shift+Right` | Next track                 |
+| `Shift+Left`  | Previous track             |
+| `Up`          | Volume up                  |
+| `Down`        | Volume down                |
+| `M`           | Mute / Unmute              |
+| `S`           | Toggle shuffle             |
+| `R`           | Toggle repeat              |
+| `Q`           | Open queue                 |
+| `L`           | Toggle lyrics              |
+| `/`           | Focus search               |
+| `Esc`         | Close modals               |
+| `[` / `]`     | Previous / Next visualizer |
+| `\`           | Toggle visualizer cycling  |
+| `Ctrl+K`      | Command palette            |
 
 ### Account Features
 
