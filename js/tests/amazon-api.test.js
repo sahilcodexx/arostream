@@ -23,6 +23,9 @@ vi.mock('../storage.js', () => ({
     trackDateSettings: {
         useAlbumYear: vi.fn(() => false),
     },
+    coverArtSizeSettings: {
+        getSize: vi.fn(() => '1280'),
+    },
 }));
 
 describe('Amazon Music playback metadata', () => {

@@ -17,6 +17,7 @@ vi.mock('../storage.js', () => ({
     trackDateSettings: { useAlbumYear: vi.fn(() => false) },
     devModeSettings: { isEnabled: vi.fn(() => false), getUrl: vi.fn(() => '') },
     amazonMusicSettings: { isEnabled: vi.fn(() => false) },
+    deezerFallbackSettings: { isEnabled: vi.fn(() => false), getApiBaseUrl: vi.fn(() => '') },
 }));
 
 vi.mock('../cache.js', () => ({
