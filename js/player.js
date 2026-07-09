@@ -80,6 +80,8 @@ export class Player {
             isFetching: false,
             hasMore: true,
         };
+        this._recentlyPlayedIds = [];
+        this._maxRecentlyPlayed = 100;
     }
 
     static async initialize(audioElement, api, quality) {
@@ -120,9 +122,6 @@ export class Player {
         this.autoplayFetchPromise = null;
         this.youtubeUpNextFetchPromise = null;
         this.youtubeUpNextSeedId = null;
-        this._recentlyPlayedIds = [];
-        this._maxRecentlyPlayed = 100;
-
         this.playbackSequence = 0;
 
         window.addEventListener('beforeunload', async () => {

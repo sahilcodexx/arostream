@@ -26,6 +26,7 @@ vi.mock('../storage.js', () => ({
     coverArtSizeSettings: {
         getSize: vi.fn(() => '1280'),
     },
+    qualityBadgeSettings: { isEnabled: vi.fn(() => true) },
 }));
 
 describe('Amazon Music playback metadata', () => {
