@@ -1908,6 +1908,27 @@
                         </div>
 
                         <div id="home-content" style="display: none">
+                            <section class="content-section home-section-recent">
+                                <div
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: space-between;
+                                        margin-bottom: 1rem;
+                                    "
+                                >
+                                    <h2 class="section-title" style="margin-bottom: 0">Jump Back In</h2>
+                                    <button
+                                        class="btn-secondary"
+                                        id="clear-recent-btn"
+                                        title="Clear History"
+                                        style="padding: 4px 8px"
+                                    >
+                                        <use svg="!lucide/trash.svg" size="16" />
+                                    </button>
+                                </div>
+                                <div class="card-grid" id="home-recent-mixed"></div>
+                            </section>
                             <section class="content-section home-section-songs">
                                 <div class="section-header-row">
                                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
@@ -1980,27 +2001,6 @@
                                     </button>
                                 </div>
                                 <div class="card-grid" id="home-recommended-artists"></div>
-                            </section>
-                            <section class="content-section home-section-recent">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Jump Back In</h2>
-                                    <button
-                                        class="btn-secondary"
-                                        id="clear-recent-btn"
-                                        title="Clear History"
-                                        style="padding: 4px 8px"
-                                    >
-                                        <use svg="!lucide/trash.svg" size="16" />
-                                    </button>
-                                </div>
-                                <div class="card-grid" id="home-recent-mixed"></div>
                             </section>
                         </div>
                     </div>
