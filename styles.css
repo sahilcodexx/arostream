@@ -9968,10 +9968,6 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
 }
 
 .home-tab {
-    white-space: nowrap;
-}
-
-.home-tab {
     background: transparent;
     border: none;
     color: var(--muted-foreground);
@@ -9981,6 +9977,10 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     font-weight: 600;
     border-bottom: 2px solid transparent;
     transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
 }
 
 .home-tab:hover {
