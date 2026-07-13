@@ -1727,12 +1727,25 @@ input[type='search']::-webkit-search-cancel-button {
 #home-content #home-recommended-albums,
 #home-content #home-recommended-artists,
 #home-content #home-recent-mixed {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    display: flex;
     gap: var(--spacing-md);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+    scrollbar-width: thin;
 }
 
-#home-content #home-recent-mixed {
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+#home-content #home-recommended-albums > *,
+#home-content #home-recommended-artists > *,
+#home-content #home-recent-mixed > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    width: 170px;
+}
+
+#home-content #home-recent-mixed > * {
+    width: 190px;
 }
 
 .section-title {
