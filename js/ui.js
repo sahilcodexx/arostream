@@ -2905,8 +2905,24 @@ export class UIRenderer {
             await this.showPage('home');
             await this.setupHomeTabs();
 
+            const greetingEl = document.getElementById('home-greeting');
+            const greetingText = document.getElementById('greeting-text');
+            const greetingSubtext = document.getElementById('greeting-subtext');
             const welcomeEl = document.getElementById('home-welcome');
             const contentEl = document.getElementById('home-content');
+
+            if (greetingText) {
+                const hour = new Date().getHours();
+                let timeGreeting = 'Good evening';
+                if (hour < 12) timeGreeting = 'Good morning';
+                else if (hour < 17) timeGreeting = 'Good afternoon';
+                const userName = authManager.user?.username || authManager.user?.email?.split('@')[0] || '';
+                greetingText.textContent = `${timeGreeting}${userName ? `, ${userName}` : ''}`;
+            }
+            if (greetingSubtext) {
+                greetingSubtext.textContent = "Here's what we recommend for you today";
+            }
+            if (greetingEl) greetingEl.style.display = 'block';
 
             const history = await db.getHistory();
             const favorites = await db.getFavorites('track');
