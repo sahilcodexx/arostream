@@ -4294,24 +4294,32 @@ export class UIRenderer {
         const section = recentContainer?.closest('.content-section');
 
         if (!homePageSettings.shouldShowJumpBackIn()) {
-            if (section) section.style.display = 'none';
+            if (section) {
+                section.hidden = true;
+                section.style.display = 'none';
+            }
             return;
         }
 
-        if (section) section.style.display = '';
+        if (section) {
+            section.hidden = false;
+            section.style.display = '';
+        }
 
         if (recentContainer) {
             const recents = recentActivityManager.getRecents();
             const items = [];
 
-            if (recents.albums) items.push(...recents.albums.slice(0, 4).map((i) => ({ ...i, _kind: 'album' })));
+            if (recents.albums) items.push(...recents.albums.slice(0, 6).map((i) => ({ ...i, _kind: 'album' })));
             if (recents.playlists)
-                items.push(...recents.playlists.slice(0, 4).map((i) => ({ ...i, _kind: 'playlist' })));
-            if (recents.mixes) items.push(...recents.mixes.slice(0, 4).map((i) => ({ ...i, _kind: 'mix' })));
+                items.push(...recents.playlists.slice(0, 6).map((i) => ({ ...i, _kind: 'playlist' })));
+            if (recents.mixes) items.push(...recents.mixes.slice(0, 6).map((i) => ({ ...i, _kind: 'mix' })));
 
-            const displayItems = items.slice(0, 6);
+            // Full-width horizontal row can show more without crowding the stack
+            const displayItems = items.slice(0, 10);
 
             if (displayItems.length > 0) {
+                if (section) section.hidden = false;
                 recentContainer.innerHTML = displayItems
                     .map((item) => {
                         if (item._kind === 'album') return this.createAlbumCardHTML(item);
@@ -4343,7 +4351,9 @@ export class UIRenderer {
                     }
                 }
             } else {
-                recentContainer.innerHTML = createPlaceholder('No recent items yet...');
+                // Hide the whole section when empty so home doesn't open with dead space
+                recentContainer.innerHTML = '';
+                if (section) section.hidden = true;
             }
         }
     }
