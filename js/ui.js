@@ -3951,7 +3951,9 @@ export class UIRenderer {
                     await new Promise((resolve) => setTimeout(resolve, 1500));
                     return this.renderHomeAlbums(forceRefresh, null, retryCount + 1);
                 } else {
-                    albumsContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem 0;">${createPlaceholder('Listen to a few more songs so we can recommend albums.')}</div>`;
+                    albumsContainer.innerHTML = createPlaceholder(
+                        'Listen to a few more songs so we can recommend albums.'
+                    );
                 }
             } catch (e) {
                 console.error(e);

@@ -1787,7 +1787,7 @@ input[type='search']::-webkit-search-cancel-button {
     flex-shrink: 0;
 }
 
-/* Home card rows — horizontal scroll strips */
+/* Home card rows — full-width horizontal scroll strips */
 #home-content #home-recommended-albums,
 #home-content #home-recommended-artists,
 #home-content #home-recent-mixed,
@@ -1798,6 +1798,7 @@ input[type='search']::-webkit-search-cancel-button {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 0.5rem;
+    margin-inline: 0;
     scrollbar-width: thin;
 }
 
@@ -1807,11 +1808,21 @@ input[type='search']::-webkit-search-cancel-button {
 .home-card-row > * {
     scroll-snap-align: start;
     flex: 0 0 auto;
-    width: 170px;
+    width: clamp(148px, 14vw, 180px);
 }
 
 #home-content #home-recent-mixed > * {
-    width: 190px;
+    width: clamp(160px, 15vw, 200px);
+}
+
+/* Empty / loading messages inside flex card rows */
+#home-content #home-recommended-albums > .placeholder-text,
+#home-content #home-recommended-artists > .placeholder-text,
+#home-content #home-recent-mixed > .placeholder-text,
+.home-card-row > .placeholder-text {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 100%;
 }
 
 /* Recommended songs — denser 2-col track grid on wide screens */
