@@ -1909,113 +1909,81 @@
                     </div>
 
                     <div id="home-view-for-you" class="home-view active">
-                        <div id="home-greeting" style="display: none; padding: 1.5rem 0 1rem">
-                            <h2
-                                id="greeting-text"
-                                style="font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem"
-                            ></h2>
-                            <p id="greeting-subtext" style="color: var(--muted-foreground); font-size: 1rem"></p>
+                        <div id="home-greeting" class="home-greeting" style="display: none">
+                            <h2 id="greeting-text" class="home-greeting-title"></h2>
+                            <p id="greeting-subtext" class="home-greeting-subtext"></p>
                         </div>
-                        <div id="home-welcome" style="display: none; text-align: center; padding: 2rem 2rem">
-                            <p style="color: var(--muted-foreground); font-size: 1.1rem">
+                        <div id="home-welcome" class="home-welcome" style="display: none">
+                            <p class="home-welcome-text">
                                 Search for your favorite songs to get started!
                             </p>
                         </div>
 
-                        <div id="home-content" style="display: none">
-                            <section class="content-section home-section-recent">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Jump Back In</h2>
+                        <div id="home-content" class="home-content" style="display: none">
+                            <section class="content-section home-section home-section-recent">
+                                <div class="section-header-row">
+                                    <h2 class="section-title">Jump Back In</h2>
                                     <button
-                                        class="btn-secondary"
+                                        class="btn-secondary section-icon-btn"
                                         id="clear-recent-btn"
                                         title="Clear History"
-                                        style="padding: 4px 8px"
                                     >
                                         <use svg="!lucide/trash.svg" size="16" />
                                     </button>
                                 </div>
-                                <div class="card-grid" id="home-recent-mixed"></div>
+                                <div class="card-grid home-card-row" id="home-recent-mixed"></div>
                             </section>
-                            <section class="content-section home-section-songs">
+
+                            <section class="content-section home-section home-section-songs">
                                 <div class="section-header-row">
-                                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
+                                    <div class="section-header-leading">
                                         <h2 class="section-title">Recommended Songs</h2>
                                         <button
-                                            class="btn-primary"
+                                            class="btn-primary home-radio-btn"
                                             id="home-start-infinite-radio-btn"
                                             title="Start Infinite Radio"
-                                            style="
-                                                display: flex;
-                                                align-items: center;
-                                                gap: 8px;
-                                                padding: 6px 12px;
-                                                font-size: 0.85rem;
-                                            "
                                         >
                                             <use svg="!lucide/radio.svg" size="16" />
                                             Start Infinite Radio
                                         </button>
                                     </div>
                                     <button
-                                        class="btn-secondary"
+                                        class="btn-secondary section-icon-btn"
                                         id="refresh-songs-btn"
                                         title="Refresh"
-                                        style="padding: 4px 8px"
                                     >
                                         <use svg="!lucide/rotate-cw.svg" size="16" />
                                     </button>
                                 </div>
-                                <div class="track-list" id="home-recommended-songs"></div>
+                                <div class="track-list home-track-list" id="home-recommended-songs"></div>
                             </section>
-                            <section class="content-section home-section-albums">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Recommended Albums</h2>
+
+                            <section class="content-section home-section home-section-albums">
+                                <div class="section-header-row">
+                                    <h2 class="section-title">Recommended Albums</h2>
                                     <button
-                                        class="btn-secondary"
+                                        class="btn-secondary section-icon-btn"
                                         id="refresh-albums-btn"
                                         title="Refresh"
-                                        style="padding: 4px 8px"
                                     >
                                         <use svg="!lucide/rotate-cw.svg" size="16" />
                                     </button>
                                 </div>
-                                <div class="card-grid" id="home-recommended-albums"></div>
+                                <div class="card-grid home-card-row" id="home-recommended-albums"></div>
                             </section>
-                            <section class="content-section home-section-artists">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Recommended Artists</h2>
+
+                            <section class="content-section home-section home-section-artists">
+                                <div class="section-header-row">
+                                    <h2 class="section-title">Recommended Artists</h2>
                                     <button
-                                        class="btn-secondary"
+                                        class="btn-secondary section-icon-btn"
                                         id="refresh-artists-btn"
                                         title="Refresh"
-                                        style="padding: 4px 8px"
                                     >
                                         <use svg="!lucide/rotate-cw.svg" size="16" />
                                     </button>
                                 </div>
-                                <div class="card-grid" id="home-recommended-artists"></div>
+                                <div class="card-grid home-card-row" id="home-recommended-artists"></div>
                             </section>
                         </div>
                     </div>
