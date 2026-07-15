@@ -190,33 +190,26 @@ export default function viteSvgUsePlugin(): Plugin {
                 const params = new URLSearchParams(queryString);
                 const absPath = path.resolve(file);
 
-                // Derived module: import base and merge attributes
                 params.delete('svg');
 
-                if (params.size === 0) {
-                    // No attributes to merge, just return raw content
-                    watched.add(absPath);
+                watched.add(absPath);
+                const svgContent = optimize(await loadSvg(absPath, false)).data;
 
-                    // Read and return the SVG content directly as a string export
-                    const svgContent = optimize(await loadSvg(absPath, false)).data;
+                if (params.size === 0) {
                     return `export default ${JSON.stringify(svgContent)};`;
                 }
-
-                const baseImport = file + '?svg';
 
                 if (params.has('icon')) {
                     params.delete('icon');
                     return [
-                        `import base from ${JSON.stringify(baseImport)};`,
                         `import { getResizer } from ${JSON.stringify(virtualModuleId)};`,
-                        `export default getResizer(base, ${JSON.stringify(params.toString())});`,
+                        `export default getResizer(${JSON.stringify(svgContent)}, ${JSON.stringify(params.toString())});`,
                     ].join('\n');
                 }
 
                 return [
-                    `import base from ${JSON.stringify(baseImport)};`,
                     `import { getParams, mergeSvgAttributes } from ${JSON.stringify(virtualModuleId)};`,
-                    `export default mergeSvgAttributes(base, getParams(${JSON.stringify(params.toString())}));`,
+                    `export default mergeSvgAttributes(${JSON.stringify(svgContent)}, getParams(${JSON.stringify(params.toString())}));`,
                 ].join('\n');
             }
         },
