@@ -2938,23 +2938,26 @@ export class UIRenderer {
             await this.renderHomeRecent();
 
             const seeds = await this.getSeeds();
-            if (seeds.length < 5) {
-                const cached = await db.getDefaultHomeSeeds();
-                if (cached.length > 0) {
-                    seeds.push(...cached);
+            if (seeds.length >= 3) {
+                void Promise.allSettled([
+                    this.renderHomeSongs(false, seeds),
+                    this.renderHomeAlbums(false, seeds),
+                    this.renderHomeArtists(false, seeds),
+                ]).catch((e) => console.warn('Failed to load home recommendations:', e));
+            } else {
+                const cached = await db.getDefaultHomeContent();
+                if (cached.tracks.length > 0) {
+                    this.renderDefaultSongs(cached.tracks);
                 }
-            }
-
-            void Promise.allSettled([
-                this.renderHomeSongs(false, seeds.length >= 3 ? seeds : null),
-                this.renderHomeAlbums(false, seeds.length >= 3 ? seeds : null),
-                this.renderHomeArtists(false, seeds.length >= 3 ? seeds : null),
-            ]).catch((e) => {
-                console.warn('Failed to load home recommendations:', e);
-            });
-
-            if (seeds.length < 3) {
-                this.fetchAndCacheDefaultSeeds();
+                if (cached.albums.length > 0) {
+                    this.renderDefaultAlbums(cached.albums);
+                }
+                if (cached.artists.length > 0) {
+                    this.renderDefaultArtists(cached.artists);
+                }
+                if (cached.tracks.length === 0) {
+                    this.fetchAndCacheDefaultContent();
+                }
             }
         } finally {
             this.renderLock = false;
@@ -4341,32 +4344,88 @@ export class UIRenderer {
         }
     }
 
-    async fetchAndCacheDefaultSeeds() {
-        const queries = ['Karan Aujla', 'Bollywood hits 2025', 'Hollywood pop hits', 'Punjabi vibe', 'Hindi pop'];
-        const allTracks = [];
-        const seen = new Set();
+    async fetchAndCacheDefaultContent() {
+        const trackQueries = ['Karan Aujla', 'Bollywood hits 2025', 'Hollywood pop hits', 'Punjabi vibe', 'Hindi pop'];
+        const albumQueries = ['Bollywood albums 2025', 'Hollywood pop albums', 'Top albums'];
+        const artistQueries = ['Karan Aujla', 'Taylor Swift', 'Arijit Singh', 'The Weeknd'];
 
-        for (const query of queries) {
+        const allTracks = [];
+        const allAlbums = [];
+        const allArtists = [];
+        const seenTracks = new Set();
+        const seenAlbums = new Set();
+        const seenArtists = new Set();
+
+        for (const q of trackQueries) {
             try {
-                const result = await this.api.searchTracks(query, { limit: 10 });
-                const tracks = result.items || [];
-                for (const track of tracks) {
-                    const id = track.id || track.videoId;
-                    if (!id || seen.has(id)) continue;
-                    seen.add(id);
-                    allTracks.push({
-                        ...track,
-                        id,
-                        type: track.type || 'track',
-                    });
+                const r = await this.api.searchTracks(q, { limit: 8 });
+                for (const t of r.items || []) {
+                    const id = t.id || t.videoId;
+                    if (!id || seenTracks.has(id)) continue;
+                    seenTracks.add(id);
+                    allTracks.push({ ...t, id, type: t.type || 'track' });
                 }
-            } catch (e) {
-                console.warn('Failed to fetch default seeds for:', query, e);
-            }
+            } catch (e) { console.warn('Failed default tracks:', q, e); }
         }
 
-        if (allTracks.length > 0) {
-            await db.saveDefaultHomeSeeds(allTracks);
+        for (const q of albumQueries) {
+            try {
+                const r = await this.api.searchAlbums(q, { limit: 6 });
+                for (const a of r.items || []) {
+                    if (!a.id || seenAlbums.has(a.id)) continue;
+                    seenAlbums.add(a.id);
+                    allAlbums.push(a);
+                }
+            } catch (e) { console.warn('Failed default albums:', q, e); }
+        }
+
+        for (const q of artistQueries) {
+            try {
+                const r = await this.api.searchArtists(q, { limit: 4 });
+                for (const a of r.items || []) {
+                    if (!a.id || seenArtists.has(a.id)) continue;
+                    seenArtists.add(a.id);
+                    allArtists.push(a);
+                }
+            } catch (e) { console.warn('Failed default artists:', q, e); }
+        }
+
+        const data = {};
+        if (allTracks.length > 0) data.tracks = allTracks;
+        if (allAlbums.length > 0) data.albums = allAlbums;
+        if (allArtists.length > 0) data.artists = allArtists;
+        if (Object.keys(data).length > 0) {
+            await db.saveDefaultHomeContent(data);
+            this.renderDefaultSongs(allTracks);
+            this.renderDefaultAlbums(allAlbums);
+            this.renderDefaultArtists(allArtists);
+        }
+    }
+
+    renderDefaultSongs(tracks) {
+        const container = document.getElementById('home-recommended-songs');
+        if (!container || tracks.length === 0) return;
+        container.innerHTML = '';
+        this.renderListWithTracks(container, tracks, true, false, false, true);
+    }
+
+    renderDefaultAlbums(albums) {
+        const container = document.getElementById('home-recommended-albums');
+        if (!container || albums.length === 0) return;
+        container.innerHTML = albums.map((a) => this.createAlbumCardHTML(a)).join('');
+        for (const a of albums) {
+            const el = container.querySelector(`[data-album-id="${a.id}"]`);
+            if (el) trackDataStore.set(el, a);
+        }
+    }
+
+    renderDefaultArtists(artists) {
+        const container = document.getElementById('home-recommended-artists');
+        if (!container || artists.length === 0) return;
+        container.innerHTML = artists.map((a) => this.createArtistCardHTML(a)).join('');
+        for (const a of artists) {
+            const el = container.querySelector(`[data-artist-id="${a.id}"]`);
+            if (el) trackDataStore.set(el, a);
         }
     }
 

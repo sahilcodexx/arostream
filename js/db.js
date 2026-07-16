@@ -76,8 +76,8 @@ export class MusicDatabase {
                 if (db.objectStoreNames.contains('default_home_songs')) {
                     db.deleteObjectStore('default_home_songs');
                 }
-                if (!db.objectStoreNames.contains('default_home_seeds')) {
-                    db.createObjectStore('default_home_seeds', { keyPath: 'id' });
+                if (db.objectStoreNames.contains('default_home_seeds')) {
+                    db.deleteObjectStore('default_home_seeds');
                 }
             };
         });
@@ -897,30 +897,25 @@ export class MusicDatabase {
         return await this.performTransaction('settings', 'readonly', (store) => store.get(key));
     }
 
-    async getDefaultHomeSeeds() {
+    async getDefaultHomeContent() {
         try {
-            return await this.performTransaction('default_home_seeds', 'readonly', (store) => store.getAll());
+            const tracks = await this.getSetting('default_home_tracks');
+            const albums = await this.getSetting('default_home_albums');
+            const artists = await this.getSetting('default_home_artists');
+            return {
+                tracks: Array.isArray(tracks) ? tracks : [],
+                albums: Array.isArray(albums) ? albums : [],
+                artists: Array.isArray(artists) ? artists : [],
+            };
         } catch {
-            return [];
+            return { tracks: [], albums: [], artists: [] };
         }
     }
 
-    async saveDefaultHomeSeeds(tracks) {
-        const db = await this.open();
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction('default_home_seeds', 'readwrite');
-            const store = transaction.objectStore('default_home_seeds');
-            store.clear();
-            for (const track of tracks) {
-                store.put(track);
-            }
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = (e) => reject(e.target.error);
-        });
-    }
-
-    async clearDefaultHomeSeeds() {
-        await this.performTransaction('default_home_seeds', 'readwrite', (store) => store.clear());
+    async saveDefaultHomeContent(data) {
+        if (data.tracks?.length) await this.saveSetting('default_home_tracks', data.tracks);
+        if (data.albums?.length) await this.saveSetting('default_home_albums', data.albums);
+        if (data.artists?.length) await this.saveSetting('default_home_artists', data.artists);
     }
 }
 
