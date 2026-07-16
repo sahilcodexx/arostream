@@ -73,8 +73,11 @@ export class MusicDatabase {
                     const store = db.createObjectStore('pinned_items', { keyPath: 'id' });
                     store.createIndex('pinnedAt', 'pinnedAt', { unique: false });
                 }
-                if (!db.objectStoreNames.contains('default_home_songs')) {
-                    db.createObjectStore('default_home_songs', { keyPath: 'id' });
+                if (db.objectStoreNames.contains('default_home_songs')) {
+                    db.deleteObjectStore('default_home_songs');
+                }
+                if (!db.objectStoreNames.contains('default_home_seeds')) {
+                    db.createObjectStore('default_home_seeds', { keyPath: 'id' });
                 }
             };
         });
@@ -894,19 +897,19 @@ export class MusicDatabase {
         return await this.performTransaction('settings', 'readonly', (store) => store.get(key));
     }
 
-    async getDefaultHomeSongs() {
+    async getDefaultHomeSeeds() {
         try {
-            return await this.performTransaction('default_home_songs', 'readonly', (store) => store.getAll());
+            return await this.performTransaction('default_home_seeds', 'readonly', (store) => store.getAll());
         } catch {
             return [];
         }
     }
 
-    async saveDefaultHomeSongs(tracks) {
+    async saveDefaultHomeSeeds(tracks) {
         const db = await this.open();
         return new Promise((resolve, reject) => {
-            const transaction = db.transaction('default_home_songs', 'readwrite');
-            const store = transaction.objectStore('default_home_songs');
+            const transaction = db.transaction('default_home_seeds', 'readwrite');
+            const store = transaction.objectStore('default_home_seeds');
             store.clear();
             for (const track of tracks) {
                 store.put(track);
@@ -916,8 +919,8 @@ export class MusicDatabase {
         });
     }
 
-    async clearDefaultHomeSongs() {
-        await this.performTransaction('default_home_songs', 'readwrite', (store) => store.clear());
+    async clearDefaultHomeSeeds() {
+        await this.performTransaction('default_home_seeds', 'readwrite', (store) => store.clear());
     }
 }
 

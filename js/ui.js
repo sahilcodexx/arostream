@@ -2906,50 +2906,14 @@ export class UIRenderer {
             await this.setupHomeTabs();
 
             const greetingEl = document.getElementById('home-greeting');
-            const greetingText = document.getElementById('greeting-text');
-            const greetingSubtext = document.getElementById('greeting-subtext');
             const welcomeEl = document.getElementById('home-welcome');
             const contentEl = document.getElementById('home-content');
 
-            if (greetingText) {
-                const hour = new Date().getHours();
-                let timeGreeting = 'Good evening';
-                if (hour < 12) timeGreeting = 'Good morning';
-                else if (hour < 17) timeGreeting = 'Good afternoon';
-                const userName = authManager.user?.username || authManager.user?.email?.split('@')[0] || '';
-                greetingText.textContent = `${timeGreeting}${userName ? `, ${userName}` : ''}`;
-            }
-            if (greetingSubtext) {
-                greetingSubtext.textContent = "Here's what we recommend for you today";
-            }
-            if (greetingEl) greetingEl.style.display = 'block';
-
-            const history = await db.getHistory();
-            const favorites = await db.getFavorites('track');
-            const playlists = await db.getPlaylists(true);
-
-            const hasActivity = history.length > 0 || favorites.length > 0 || playlists.length > 0;
+            if (greetingEl) greetingEl.style.display = 'none';
 
             const editorsPicksTab = document.querySelector('.home-tab[data-tab="editors-picks"]');
             if (editorsPicksTab) {
                 editorsPicksTab.style.display = homePageSettings.shouldShowEditorsPicks() ? '' : 'none';
-            }
-
-            if (!hasActivity) {
-                const cached = await db.getDefaultHomeSongs();
-                if (cached.length > 0) {
-                    if (welcomeEl) welcomeEl.style.display = 'none';
-                    if (contentEl) {
-                        contentEl.style.display = 'grid';
-                        contentEl.innerHTML = '';
-                    }
-                    await this.renderDefaultHomeContent(contentEl, cached);
-                } else {
-                    if (welcomeEl) welcomeEl.style.display = 'block';
-                    if (contentEl) contentEl.style.display = 'none';
-                    this.fetchAndCacheDefaultSongs();
-                }
-                return;
             }
 
             if (welcomeEl) welcomeEl.style.display = 'none';
@@ -2973,19 +2937,25 @@ export class UIRenderer {
 
             await this.renderHomeRecent();
 
-            // Load dynamic recommendation sections in the background so slow
-            // external APIs never block navigation/search routing.
-            void this.getSeeds()
-                .then((seeds) =>
-                    Promise.allSettled([
-                        this.renderHomeSongs(false, seeds),
-                        this.renderHomeAlbums(false, seeds),
-                        this.renderHomeArtists(false, seeds),
-                    ])
-                )
-                .catch((e) => {
-                    console.warn('Failed to load home recommendations:', e);
-                });
+            const seeds = await this.getSeeds();
+            if (seeds.length < 5) {
+                const cached = await db.getDefaultHomeSeeds();
+                if (cached.length > 0) {
+                    seeds.push(...cached);
+                }
+            }
+
+            void Promise.allSettled([
+                this.renderHomeSongs(false, seeds.length >= 3 ? seeds : null),
+                this.renderHomeAlbums(false, seeds.length >= 3 ? seeds : null),
+                this.renderHomeArtists(false, seeds.length >= 3 ? seeds : null),
+            ]).catch((e) => {
+                console.warn('Failed to load home recommendations:', e);
+            });
+
+            if (seeds.length < 3) {
+                this.fetchAndCacheDefaultSeeds();
+            }
         } finally {
             this.renderLock = false;
         }
@@ -4371,7 +4341,7 @@ export class UIRenderer {
         }
     }
 
-    async fetchAndCacheDefaultSongs() {
+    async fetchAndCacheDefaultSeeds() {
         const queries = ['Karan Aujla', 'Bollywood hits 2025', 'Hollywood pop hits', 'Punjabi vibe', 'Hindi pop'];
         const allTracks = [];
         const seen = new Set();
@@ -4391,37 +4361,12 @@ export class UIRenderer {
                     });
                 }
             } catch (e) {
-                console.warn('Failed to fetch default songs for:', query, e);
+                console.warn('Failed to fetch default seeds for:', query, e);
             }
         }
 
         if (allTracks.length > 0) {
-            await db.saveDefaultHomeSongs(allTracks);
-            const contentEl = document.getElementById('home-content');
-            const welcomeEl = document.getElementById('home-welcome');
-            if (contentEl && welcomeEl && contentEl.style.display !== 'grid') {
-                welcomeEl.style.display = 'none';
-                contentEl.style.display = 'grid';
-                contentEl.innerHTML = '';
-                await this.renderDefaultHomeContent(contentEl, allTracks);
-            }
-        }
-    }
-
-    async renderDefaultHomeContent(container, tracks) {
-        const section = document.createElement('section');
-        section.className = 'content-section home-section home-section-songs';
-        section.innerHTML = `
-            <div class="section-header-row">
-                <h2 class="section-title">Discover Something New</h2>
-            </div>
-            <div class="track-list home-track-list" id="default-home-songs"></div>
-        `;
-        container.appendChild(section);
-
-        const list = section.querySelector('#default-home-songs');
-        if (list && tracks.length > 0) {
-            await this.renderListWithTracks(list, tracks, true, false, false, true);
+            await db.saveDefaultHomeSeeds(allTracks);
         }
     }
 
