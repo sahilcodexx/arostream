@@ -1040,7 +1040,6 @@ ul {
     min-height: 0;
     background: var(--glass-bg-strong);
     backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
     border-right: 1px solid var(--glass-border);
     box-shadow: var(--glass-inset);
     padding: 1.25rem;
@@ -1187,7 +1186,6 @@ ul {
     border-radius: var(--radius-apple);
     position: fixed !important;
     background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
     backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
     border: 1px solid var(--glass-border-strong);
     box-shadow: var(--glass-shadow), var(--glass-inset);
@@ -1502,7 +1500,6 @@ ul {
     padding: 0.75rem 2.5rem;
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     border: 1px solid var(--glass-border);
     border-radius: 9999px;
     color: var(--foreground);
@@ -1813,7 +1810,6 @@ input[type='search']::-webkit-search-cancel-button {
     border-radius: calc(var(--radius-apple) + 4px);
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-inset);
 }
@@ -1853,7 +1849,6 @@ input[type='search']::-webkit-search-cancel-button {
     border-radius: 9999px;
     background: var(--glass-bg-soft);
     border: 1px solid var(--glass-border);
-    backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     transition:
         transform var(--duration-fast) var(--ease-apple),
@@ -2095,7 +2090,6 @@ input[type='search']::-webkit-search-cancel-button {
 @media (hover: hover) and (pointer: fine) {
     .card:hover {
         background: var(--glass-bg-soft);
-        backdrop-filter: blur(16px) saturate(1.3);
         backdrop-filter: blur(16px) saturate(1.3);
         transform: translateY(-3px);
         box-shadow: var(--glass-shadow);
@@ -2536,7 +2530,6 @@ input[type='search']::-webkit-search-cancel-button {
 @media (hover: hover) and (pointer: fine) {
     .track-item:hover {
         background: var(--glass-bg-soft);
-        backdrop-filter: blur(12px);
         backdrop-filter: blur(12px);
         border-color: var(--glass-border);
         transform: none;
@@ -3247,7 +3240,6 @@ body.multi-select-mode .track-item:hover {
     cursor: pointer;
     font-weight: 500;
     font-size: 0.8333rem;
-    backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     transition:
         background-color var(--duration-fast) var(--ease-apple),
@@ -10192,7 +10184,6 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     border-radius: 9999px;
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     box-shadow: var(--glass-inset);
 }
 
@@ -12115,7 +12106,6 @@ body.sidebar-collapsed #sidebar-nav-donate {
 .search-history {
     background: var(--glass-bg-strong) !important;
     backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
     border: 1px solid var(--glass-border-strong) !important;
     box-shadow: var(--glass-shadow), var(--glass-inset);
     border-radius: var(--radius-apple);
@@ -12125,7 +12115,6 @@ body.sidebar-collapsed #sidebar-nav-donate {
 @media (max-width: 768px) {
     .sidebar.is-open {
         background: var(--glass-bg-strong);
-        backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
         backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
     }
 
@@ -12153,7 +12142,6 @@ body.sidebar-collapsed #sidebar-nav-donate {
     .btn-secondary,
     .dropdown-menu,
     .search-history {
-        backdrop-filter: none !important;
         backdrop-filter: none !important;
         background: var(--card) !important;
     }
@@ -12341,7 +12329,6 @@ body.sidebar-collapsed #sidebar-nav-donate {
     border: none;
     box-shadow: none;
     backdrop-filter: none;
-    backdrop-filter: none;
 }
 
 .section-header-row {
@@ -12500,7 +12487,6 @@ body.sidebar-collapsed #sidebar-nav-donate {
 @media (hover: hover) and (pointer: fine) {
     #page-home .track-item:hover {
         background: transparent;
-        backdrop-filter: none;
         backdrop-filter: none;
     }
 }
