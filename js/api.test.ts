@@ -98,8 +98,7 @@ enum Detection {
     OPUS_96,
 }
 
-/*
-suite('Track Downloads', async () => {
+suite.skip('Track Downloads', async () => {
     const SILENCE_TRACK = 46022548;
     const TRACK_ATMOS = 463900720; // Taylor Swift - The Fate of Ophelia
     const TRACK_NO_LOSSLESS = 31097959; // deadmau5 - while(1<2)
@@ -545,4 +544,3 @@ suite('Track Downloads', async () => {
         }
     });
 });
-*/

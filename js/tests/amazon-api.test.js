@@ -27,6 +27,10 @@ vi.mock('../storage.js', () => ({
         getSize: vi.fn(() => '1280'),
     },
     qualityBadgeSettings: { isEnabled: vi.fn(() => true) },
+    losslessContainerSettings: {
+        getContainer: vi.fn(() => 'flac'),
+        setContainer: vi.fn(),
+    },
 }));
 
 describe('Amazon Music playback metadata', () => {

@@ -131,6 +131,7 @@ describe('Player', () => {
             getCoverUrl: vi.fn((id) => `url-${id}`),
             getCoverSrcset: vi.fn(),
             getStreamUrl: vi.fn(),
+            getVideoArtwork: vi.fn(() => Promise.resolve(null)),
         };
 
         Player._instance = null;
