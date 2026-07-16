@@ -4365,7 +4365,9 @@ export class UIRenderer {
                     seenTracks.add(id);
                     allTracks.push({ ...t, id, type: t.type || 'track' });
                 }
-            } catch (e) { console.warn('Failed default tracks:', q, e); }
+            } catch (e) {
+                console.warn('Failed default tracks:', q, e);
+            }
         }
 
         for (const q of albumQueries) {
@@ -4376,7 +4378,9 @@ export class UIRenderer {
                     seenAlbums.add(a.id);
                     allAlbums.push(a);
                 }
-            } catch (e) { console.warn('Failed default albums:', q, e); }
+            } catch (e) {
+                console.warn('Failed default albums:', q, e);
+            }
         }
 
         for (const q of artistQueries) {
@@ -4387,7 +4391,9 @@ export class UIRenderer {
                     seenArtists.add(a.id);
                     allArtists.push(a);
                 }
-            } catch (e) { console.warn('Failed default artists:', q, e); }
+            } catch (e) {
+                console.warn('Failed default artists:', q, e);
+            }
         }
 
         const data = {};
