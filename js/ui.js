@@ -2936,8 +2936,16 @@ export class UIRenderer {
             }
 
             if (!hasActivity) {
-                if (welcomeEl) welcomeEl.style.display = 'block';
-                if (contentEl) contentEl.style.display = 'none';
+                const cached = await db.getDefaultHomeSongs();
+                if (cached.length > 0) {
+                    if (welcomeEl) welcomeEl.style.display = 'none';
+                    if (contentEl) { contentEl.style.display = 'grid'; contentEl.innerHTML = ''; }
+                    await this.renderDefaultHomeContent(contentEl, cached);
+                } else {
+                    if (welcomeEl) welcomeEl.style.display = 'block';
+                    if (contentEl) contentEl.style.display = 'none';
+                    this.fetchAndCacheDefaultSongs();
+                }
                 return;
             }
 
@@ -4357,6 +4365,64 @@ export class UIRenderer {
                 recentContainer.innerHTML = '';
                 if (section) section.hidden = true;
             }
+        }
+    }
+
+    async fetchAndCacheDefaultSongs() {
+        const queries = [
+            'Karan Aujla',
+            'Bollywood hits 2025',
+            'Hollywood pop hits',
+            'Punjabi vibe',
+            'Hindi pop'
+        ];
+        const allTracks = [];
+        const seen = new Set();
+
+        for (const query of queries) {
+            try {
+                const results = await this.api.searchTracks(query, { limit: 10 });
+                for (const track of results) {
+                    if (!seen.has(track.id)) {
+                        seen.add(track.id);
+                        allTracks.push({
+                            ...track,
+                            type: track.type || 'track',
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to fetch default songs for:', query, e);
+            }
+        }
+
+        if (allTracks.length > 0) {
+            await db.saveDefaultHomeSongs(allTracks);
+            const contentEl = document.getElementById('home-content');
+            const welcomeEl = document.getElementById('home-welcome');
+            if (contentEl && welcomeEl && contentEl.style.display === 'none') {
+                welcomeEl.style.display = 'none';
+                contentEl.style.display = 'grid';
+                contentEl.innerHTML = '';
+                await this.renderDefaultHomeContent(contentEl, allTracks);
+            }
+        }
+    }
+
+    async renderDefaultHomeContent(container, tracks) {
+        const section = document.createElement('section');
+        section.className = 'content-section home-section home-section-songs';
+        section.innerHTML = `
+            <div class="section-header-row">
+                <h2 class="section-title">Discover Something New</h2>
+            </div>
+            <div class="track-list home-track-list" id="default-home-songs"></div>
+        `;
+        container.appendChild(section);
+
+        const list = section.querySelector('#default-home-songs');
+        if (list && tracks.length > 0) {
+            await this.renderListWithTracks(list, tracks, true, false, false, true);
         }
     }
 

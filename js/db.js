@@ -1,7 +1,7 @@
 export class MusicDatabase {
     constructor() {
         this.dbName = 'MonochromeDB';
-        this.version = 11;
+        this.version = 12;
         this.db = null;
     }
 
@@ -72,6 +72,9 @@ export class MusicDatabase {
                 if (!db.objectStoreNames.contains('pinned_items')) {
                     const store = db.createObjectStore('pinned_items', { keyPath: 'id' });
                     store.createIndex('pinnedAt', 'pinnedAt', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('default_home_songs')) {
+                    db.createObjectStore('default_home_songs', { keyPath: 'id' });
                 }
             };
         });
@@ -889,6 +892,32 @@ export class MusicDatabase {
 
     async getSetting(key) {
         return await this.performTransaction('settings', 'readonly', (store) => store.get(key));
+    }
+
+    async getDefaultHomeSongs() {
+        try {
+            return await this.performTransaction('default_home_songs', 'readonly', (store) => store.getAll());
+        } catch {
+            return [];
+        }
+    }
+
+    async saveDefaultHomeSongs(tracks) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('default_home_songs', 'readwrite');
+            const store = transaction.objectStore('default_home_songs');
+            store.clear();
+            for (const track of tracks) {
+                store.put(track);
+            }
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async clearDefaultHomeSongs() {
+        await this.performTransaction('default_home_songs', 'readwrite', (store) => store.clear());
     }
 }
 
