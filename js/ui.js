@@ -2939,7 +2939,10 @@ export class UIRenderer {
                 const cached = await db.getDefaultHomeSongs();
                 if (cached.length > 0) {
                     if (welcomeEl) welcomeEl.style.display = 'none';
-                    if (contentEl) { contentEl.style.display = 'grid'; contentEl.innerHTML = ''; }
+                    if (contentEl) {
+                        contentEl.style.display = 'grid';
+                        contentEl.innerHTML = '';
+                    }
                     await this.renderDefaultHomeContent(contentEl, cached);
                 } else {
                     if (welcomeEl) welcomeEl.style.display = 'block';
@@ -4369,13 +4372,7 @@ export class UIRenderer {
     }
 
     async fetchAndCacheDefaultSongs() {
-        const queries = [
-            'Karan Aujla',
-            'Bollywood hits 2025',
-            'Hollywood pop hits',
-            'Punjabi vibe',
-            'Hindi pop'
-        ];
+        const queries = ['Karan Aujla', 'Bollywood hits 2025', 'Hollywood pop hits', 'Punjabi vibe', 'Hindi pop'];
         const allTracks = [];
         const seen = new Set();
 
