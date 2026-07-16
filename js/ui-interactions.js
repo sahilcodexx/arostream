@@ -93,17 +93,28 @@ export function initializeUIInteractions(player, api, ui) {
     const ESTIMATED_ITEM_HEIGHT = 58;
 
     // Sidebar mobile
-    hamburgerBtn.addEventListener('click', () => {
-        sidebar.classList.add('is-open');
-        sidebarOverlay.classList.add('is-visible');
-    });
-
     const closeSidebar = () => {
         sidebar.classList.remove('is-open');
         sidebarOverlay.classList.remove('is-visible');
     };
 
-    sidebarOverlay.addEventListener('click', closeSidebar);
+    const toggleSidebar = () => {
+        const isOpen = sidebar.classList.contains('is-open');
+        if (isOpen) {
+            closeSidebar();
+        } else {
+            sidebar.classList.add('is-open');
+            sidebarOverlay.classList.add('is-visible');
+        }
+    };
+
+    hamburgerBtn.addEventListener('click', toggleSidebar);
+
+    document.addEventListener('click', (e) => {
+        if (!sidebar.classList.contains('is-open')) return;
+        if (sidebar.contains(e.target) || hamburgerBtn.contains(e.target)) return;
+        closeSidebar();
+    });
 
     sidebar.addEventListener('click', (e) => {
         if (e.target.closest('a')) {

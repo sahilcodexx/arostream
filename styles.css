@@ -1370,9 +1370,8 @@ ul {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgb(0, 0, 0, 0.5);
     z-index: 2150;
-    backdrop-filter: blur(2px);
+    pointer-events: none;
 }
 
 .main-header {
@@ -7169,6 +7168,7 @@ img[src=''] {
 
     .main-content {
         padding: var(--spacing-md);
+        padding-bottom: calc(var(--player-bar-height-mobile) + 2rem);
         grid-area: main;
         overflow-y: visible;
         overflow-x: hidden;
@@ -12659,6 +12659,11 @@ body.sidebar-collapsed #sidebar-nav-donate {
         padding-top: 1rem;
     }
 
+    #home-content,
+    .home-content {
+        gap: 1.8rem;
+    }
+
     .home-header-tabs {
         margin-bottom: 1.8rem;
     }
@@ -12676,6 +12681,10 @@ body.sidebar-collapsed #sidebar-nav-donate {
         flex-direction: column;
     }
 
+    #home-content .home-section-recent #home-recent-mixed > * {
+        width: min(78vw, 380px);
+    }
+
     #page-home .track-item,
     #page-home .track-item.track-item--inline-like {
         grid-template-columns: 45px minmax(0, 1fr) auto 3rem auto;
@@ -12683,5 +12692,40 @@ body.sidebar-collapsed #sidebar-nav-donate {
 
     #page-home .track-item-actions {
         display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    #home-content,
+    .home-content {
+        gap: 1.25rem;
+    }
+
+    .home-greeting-title {
+        font-size: 1.75rem;
+    }
+
+    .home-greeting-subtext {
+        font-size: 0.95rem;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+    }
+
+    #home-content #home-recommended-albums > *,
+    #home-content #home-recommended-artists > *,
+    .home-card-row > * {
+        width: clamp(130px, 40vw, 160px);
+    }
+
+    #home-content .home-section-recent #home-recent-mixed > * {
+        width: min(82vw, 300px);
+    }
+
+    .home-radio-btn {
+        gap: 0.35rem;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.78rem;
     }
 }
