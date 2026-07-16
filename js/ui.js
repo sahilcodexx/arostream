@@ -4378,15 +4378,17 @@ export class UIRenderer {
 
         for (const query of queries) {
             try {
-                const results = await this.api.searchTracks(query, { limit: 10 });
-                for (const track of results) {
-                    if (!seen.has(track.id)) {
-                        seen.add(track.id);
-                        allTracks.push({
-                            ...track,
-                            type: track.type || 'track',
-                        });
-                    }
+                const result = await this.api.searchTracks(query, { limit: 10 });
+                const tracks = result.items || [];
+                for (const track of tracks) {
+                    const id = track.id || track.videoId;
+                    if (!id || seen.has(id)) continue;
+                    seen.add(id);
+                    allTracks.push({
+                        ...track,
+                        id,
+                        type: track.type || 'track',
+                    });
                 }
             } catch (e) {
                 console.warn('Failed to fetch default songs for:', query, e);
@@ -4397,7 +4399,7 @@ export class UIRenderer {
             await db.saveDefaultHomeSongs(allTracks);
             const contentEl = document.getElementById('home-content');
             const welcomeEl = document.getElementById('home-welcome');
-            if (contentEl && welcomeEl && contentEl.style.display === 'none') {
+            if (contentEl && welcomeEl && contentEl.style.display !== 'grid') {
                 welcomeEl.style.display = 'none';
                 contentEl.style.display = 'grid';
                 contentEl.innerHTML = '';
