@@ -4345,66 +4345,80 @@ export class UIRenderer {
     }
 
     async fetchAndCacheDefaultContent() {
-        const trackQueries = ['Karan Aujla', 'Bollywood hits 2025', 'Hollywood pop hits', 'Punjabi vibe', 'Hindi pop'];
-        const albumQueries = ['Bollywood albums 2025', 'Hollywood pop albums', 'Top albums'];
-        const artistQueries = ['Karan Aujla', 'Taylor Swift', 'Arijit Singh', 'The Weeknd'];
+        const trackQueries = [
+            'Karan Aujla', 'Bollywood hits 2025', 'Pop hits 2025', 'Punjabi music',
+            'Hindi pop', 'English pop', 'Party songs', 'Chill vibes',
+        ];
+        const albumQueries = [
+            'Pop albums', 'Rock albums', 'Bollywood albums', 'Indie albums',
+            'Hip hop albums', 'Electronic albums', 'Top albums 2025', 'Top albums 2024',
+        ];
+        const artistQueries = [
+            'Karan Aujla', 'Taylor Swift', 'Arijit Singh', 'The Weeknd',
+            'Diljit Dosanjh', 'Billie Eilish', 'A R Rahman', 'Ed Sheeran',
+        ];
 
-        const allTracks = [];
-        const allAlbums = [];
-        const allArtists = [];
-        const seenTracks = new Set();
-        const seenAlbums = new Set();
-        const seenArtists = new Set();
+        try {
+            const [trackResults, albumResults, artistResults] = await Promise.all([
+                Promise.allSettled(
+                    trackQueries.map((q) => this.api.searchTracks(q, { limit: 8 }).then((r) => r.items || []))
+                ),
+                Promise.allSettled(
+                    albumQueries.map((q) => this.api.searchAlbums(q, { limit: 8 }).then((r) => r.items || []))
+                ),
+                Promise.allSettled(
+                    artistQueries.map((q) => this.api.searchArtists(q, { limit: 6 }).then((r) => r.items || []))
+                ),
+            ]);
 
-        for (const q of trackQueries) {
-            try {
-                const r = await this.api.searchTracks(q, { limit: 8 });
-                for (const t of r.items || []) {
+            const allTracks = [];
+            const allAlbums = [];
+            const allArtists = [];
+            const seenTracks = new Set();
+            const seenAlbums = new Set();
+            const seenArtists = new Set();
+
+            for (const result of trackResults) {
+                if (result.status !== 'fulfilled') continue;
+                for (const t of result.value) {
                     const id = t.id || t.videoId;
                     if (!id || seenTracks.has(id)) continue;
                     seenTracks.add(id);
                     allTracks.push({ ...t, id, type: t.type || 'track' });
                 }
-            } catch (e) {
-                console.warn('Failed default tracks:', q, e);
             }
-        }
 
-        for (const q of albumQueries) {
-            try {
-                const r = await this.api.searchAlbums(q, { limit: 6 });
-                for (const a of r.items || []) {
-                    if (!a.id || seenAlbums.has(a.id)) continue;
+            for (const result of albumResults) {
+                if (result.status !== 'fulfilled') continue;
+                for (const a of result.value) {
+                    if (!a.id || !a.title || seenAlbums.has(a.id)) continue;
+                    if ((a.type || '').toUpperCase() === 'SINGLE') continue;
                     seenAlbums.add(a.id);
                     allAlbums.push(a);
                 }
-            } catch (e) {
-                console.warn('Failed default albums:', q, e);
             }
-        }
 
-        for (const q of artistQueries) {
-            try {
-                const r = await this.api.searchArtists(q, { limit: 4 });
-                for (const a of r.items || []) {
+            for (const result of artistResults) {
+                if (result.status !== 'fulfilled') continue;
+                for (const a of result.value) {
                     if (!a.id || seenArtists.has(a.id)) continue;
                     seenArtists.add(a.id);
                     allArtists.push(a);
                 }
-            } catch (e) {
-                console.warn('Failed default artists:', q, e);
             }
-        }
 
-        const data = {};
-        if (allTracks.length > 0) data.tracks = allTracks;
-        if (allAlbums.length > 0) data.albums = allAlbums;
-        if (allArtists.length > 0) data.artists = allArtists;
-        if (Object.keys(data).length > 0) {
-            await db.saveDefaultHomeContent(data);
-            this.renderDefaultSongs(allTracks);
-            this.renderDefaultAlbums(allAlbums);
-            this.renderDefaultArtists(allArtists);
+            const data = {};
+            if (allTracks.length > 0) data.tracks = allTracks;
+            if (allAlbums.length > 0) data.albums = allAlbums;
+            if (allArtists.length > 0) data.artists = allArtists;
+            if (Object.keys(data).length > 0) {
+                await db.saveDefaultHomeContent(data);
+                this.renderDefaultSongs(allTracks);
+                this.renderDefaultAlbums(allAlbums);
+                this.renderDefaultArtists(allArtists);
+            }
+        } catch (e) {
+            console.error('Failed to fetch default home content:', e);
         }
     }
 

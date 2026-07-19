@@ -185,7 +185,7 @@ export class Player {
             this.shakaPlayer = new shaka.Player();
             this.shakaPlayer.configure({
                 streaming: {
-                    bufferingGoal: 30,
+                    bufferingGoal: 50,
                     rebufferingGoal: 2,
                     bufferBehind: 30,
                 },
@@ -564,12 +564,19 @@ export class Player {
         const duration = this.activeElement.duration || 0;
         const timeRemaining = duration - currentTime;
 
-        // Preload if we are in last 30 seconds of song
-        const shouldPreload = duration > 0 && timeRemaining <= 30;
+        // Preload if we are in last 60 seconds of song
+        const shouldPreload = duration > 0 && timeRemaining <= 60;
 
         if (shouldPreload) {
             this._pendingPreload = false;
             void this._executePreloadNextTracks().catch(console.error);
+        }
+
+        // Auto-load more queue when within 5 tracks of end — Echo Music pattern
+        const currentQueue = this.shuffleActive ? this.shuffledQueue : this.queue;
+        const tracksRemaining = currentQueue.length - this.currentQueueIndex - 1;
+        if (tracksRemaining <= 5 && tracksRemaining > 0 && this.currentTrack?.id?.startsWith?.('yt:')) {
+            void this.fillYouTubeUpNextQueue().catch(() => {});
         }
     }
 
@@ -582,97 +589,147 @@ export class Player {
         const currentQueue = this.shuffleActive ? this.shuffledQueue : this.queue;
         const tracksToPreload = [];
 
-        // Only preload the next 1 song to prevent data waste
-        for (let i = 1; i <= 1; i++) {
+        // Preload the next 3 tracks for URL resolution
+        for (let i = 1; i <= 3; i++) {
             const nextIndex = this.currentQueueIndex + i;
             if (nextIndex < currentQueue.length) {
                 tracksToPreload.push({ track: currentQueue[nextIndex], index: nextIndex });
             }
         }
 
-        for (const { track } of tracksToPreload) {
-            if (this.preloadCache.has(track.id)) continue;
+        if (tracksToPreload.length === 0) return;
+
+        // Phase 1: Resolve ALL stream URLs in parallel
+        const resolvePromises = tracksToPreload.map(async ({ track }) => {
+            if (this.preloadCache.has(track.id)) return;
             const isTracker = track.isTracker || (track.id && String(track.id).startsWith('tracker-'));
             const isPodcast = track.isPodcast || (track.id && String(track.id).startsWith('podcast_'));
-            if (track.isLocal || isTracker || isPodcast || (track.audioUrl && !track.isLocal)) continue;
+            if (track.isLocal || isTracker || isPodcast || (track.audioUrl && !track.isLocal)) return;
+
             try {
                 const streamInfo =
                     track.type == 'video'
                         ? await this.api.getVideoStreamUrl(track.id)
                         : await this.api.getStreamUrl(track.id, this.quality);
 
-                if (this.preloadAbortController.signal.aborted) break;
+                if (this.preloadAbortController.signal.aborted) return;
 
                 this.preloadCache.set(track.id, streamInfo);
-                const streamUrl = streamInfo.url;
-
-                if (streamInfo.playbackType?.includes('cenc')) continue;
-                if (this.isNativeAmazonHlsDecryptionUrl(streamUrl)) continue;
-
-                // Warm connection and pre-fetch
-                if (!streamUrl.startsWith('blob:')) {
-                    if (streamUrl.includes('.mpd') || streamUrl.includes('.m3u8')) {
-                        if (
-                            this.shakaInitialized &&
-                            this.shakaPlayer &&
-                            typeof this.shakaPlayer.preload === 'function'
-                        ) {
-                            try {
-                                let preloadConfig = undefined;
-                                if (typeof this.shakaPlayer.getConfiguration === 'function') {
-                                    preloadConfig = this.shakaPlayer.getConfiguration();
-                                    const stats =
-                                        typeof this.shakaPlayer.getStats === 'function'
-                                            ? this.shakaPlayer.getStats()
-                                            : null;
-                                    if (stats && stats.estimatedBandwidth) {
-                                        preloadConfig.abr.defaultBandwidthEstimate = stats.estimatedBandwidth;
-                                    }
-
-                                    // Lock the preload to the exact current audio codec to prevent ABR mismatch,
-                                    // which forces the player to discard and re-fetch chunks on slow connections.
-                                    preloadConfig.abr.enabled = false;
-                                    try {
-                                        const variants =
-                                            typeof this.shakaPlayer.getVariantTracks === 'function'
-                                                ? this.shakaPlayer.getVariantTracks()
-                                                : [];
-                                        const activeVariant = variants.find((v) => v.active);
-                                        if (activeVariant && activeVariant.audioCodec) {
-                                            preloadConfig.preferredAudioCodecs = [activeVariant.audioCodec];
-                                        }
-                                    } catch (_e) {}
-                                }
-                                const preloadManager = await this.shakaPlayer.preload(
-                                    streamUrl,
-                                    null,
-                                    null,
-                                    preloadConfig
-                                );
-                                streamInfo.preloadManager = preloadManager;
-                            } catch (_e) {
-                                // Ignore preload errors, will just load fresh
-                            }
-                        } else {
-                            fetch(streamUrl, { method: 'GET', signal: this.preloadAbortController.signal }).catch(
-                                () => {}
-                            );
-                        }
-                    } else {
-                        // For static files (FLAC, MP3), the audio element completely primes the cache.
-                        const preloader = new Audio();
-                        preloader.preload = 'auto';
-                        preloader.muted = true;
-                        preloader.src = getProxyUrl(streamUrl);
-                        streamInfo.preloader = preloader; // Hold reference
-                    }
-                }
+                return { track, streamInfo };
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    // console.debug('Failed to get stream URL for preload:', trackTitle);
+                    // Silently ignore
                 }
             }
+        });
+
+        const results = await Promise.all(resolvePromises);
+        if (this.preloadAbortController.signal.aborted) return;
+
+        // Phase 2: Only warm connection/pre-fetch for the immediate next track
+        const nextTrackData = results.find((r) => r && r.track === tracksToPreload[0]?.track);
+        if (!nextTrackData) return;
+
+        const { streamInfo } = nextTrackData;
+        const streamUrl = streamInfo.url;
+
+        if (streamInfo.playbackType?.includes('cenc')) return;
+        if (this.isNativeAmazonHlsDecryptionUrl(streamUrl)) return;
+
+        // Warm connection and pre-fetch
+        if (!streamUrl.startsWith('blob:')) {
+            if (streamUrl.includes('.mpd') || streamUrl.includes('.m3u8')) {
+                if (
+                    this.shakaInitialized &&
+                    this.shakaPlayer &&
+                    typeof this.shakaPlayer.preload === 'function'
+                ) {
+                    try {
+                        let preloadConfig = undefined;
+                        if (typeof this.shakaPlayer.getConfiguration === 'function') {
+                            preloadConfig = this.shakaPlayer.getConfiguration();
+                            const stats =
+                                typeof this.shakaPlayer.getStats === 'function'
+                                    ? this.shakaPlayer.getStats()
+                                    : null;
+                            if (stats && stats.estimatedBandwidth) {
+                                preloadConfig.abr.defaultBandwidthEstimate = stats.estimatedBandwidth;
+                            }
+
+                            preloadConfig.abr.enabled = false;
+                            try {
+                                const variants =
+                                    typeof this.shakaPlayer.getVariantTracks === 'function'
+                                        ? this.shakaPlayer.getVariantTracks()
+                                        : [];
+                                const activeVariant = variants.find((v) => v.active);
+                                if (activeVariant && activeVariant.audioCodec) {
+                                    preloadConfig.preferredAudioCodecs = [activeVariant.audioCodec];
+                                }
+                            } catch (_e) {}
+                        }
+                        const preloadManager = await this.shakaPlayer.preload(
+                            streamUrl,
+                            null,
+                            null,
+                            preloadConfig
+                        );
+                        streamInfo.preloadManager = preloadManager;
+                    } catch (_e) {
+                        // Ignore preload errors, will just load fresh
+                    }
+                } else {
+                    fetch(streamUrl, { method: 'GET', signal: this.preloadAbortController.signal }).catch(
+                        () => {}
+                    );
+                }
+            } else {
+                const preloader = new Audio();
+                preloader.preload = 'auto';
+                preloader.muted = true;
+                preloader.src = getProxyUrl(streamUrl);
+                streamInfo.preloader = preloader;
+            }
         }
+    }
+
+    // Pre-resolve upcoming tracks as soon as queue changes
+    _preResolveQueue() {
+        if (this._preResolveTimeout) clearTimeout(this._preResolveTimeout);
+        if (this._preResolveAbortController) {
+            this._preResolveAbortController.abort();
+        }
+        this._preResolveAbortController = new AbortController();
+        const signal = this._preResolveAbortController.signal;
+
+        this._preResolveTimeout = setTimeout(() => {
+            const currentQueue = this.shuffleActive ? this.shuffledQueue : this.queue;
+            const tracks = [];
+            for (let i = 0; i < currentQueue.length; i++) {
+                if (i === this.currentQueueIndex) continue;
+                if (this.preloadCache.has(currentQueue[i].id)) continue;
+                tracks.push(currentQueue[i]);
+                if (tracks.length >= 5) break;
+            }
+
+            if (tracks.length === 0) return;
+
+            for (const track of tracks) {
+                if (this.preloadCache.has(track.id)) continue;
+                if (signal.aborted) return;
+                const isTracker = track.isTracker || (track.id && String(track.id).startsWith('tracker-'));
+                const isPodcast = track.isPodcast || (track.id && String(track.id).startsWith('podcast_'));
+                if (track.isLocal || isTracker || isPodcast || (track.audioUrl && !track.isLocal)) continue;
+
+                this.api.getStreamUrl(track.id, this.quality)
+                    .then((streamInfo) => {
+                        if (!signal.aborted && !this.preloadCache.has(track.id) && streamInfo?.url) {
+                            this.preloadCache.set(track.id, streamInfo);
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }, 1000);
     }
 
     shouldFetchMoreArtistPopularTracks(currentQueue = this.getCurrentQueue()) {
@@ -2190,6 +2247,7 @@ export class Player {
         this.shuffleActive = false;
         this.preloadCache.clear();
         await this.saveQueueState();
+        this._preResolveQueue();
     }
 
     setArtistPopularTracksContext(artistId, initialTracks, offset = 15, hasMore = true) {
@@ -2270,6 +2328,7 @@ export class Player {
             await this.playTrackFromQueue(0, 0);
         }
         await this.saveQueueState();
+        this._preResolveQueue();
     }
 
     async addNextToQueue(trackOrTracks) {
@@ -2287,6 +2346,7 @@ export class Player {
         }
 
         await this.saveQueueState();
+        this._preResolveQueue();
         this.preloadNextTracks(); // Update preload since next track changed
     }
 

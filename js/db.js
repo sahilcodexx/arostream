@@ -899,9 +899,9 @@ export class MusicDatabase {
 
     async getDefaultHomeContent() {
         try {
-            const tracks = await this.getSetting('default_home_tracks');
-            const albums = await this.getSetting('default_home_albums');
-            const artists = await this.getSetting('default_home_artists');
+            const tracks = await this.getSetting('default_home_tracks_v2');
+            const albums = await this.getSetting('default_home_albums_v2');
+            const artists = await this.getSetting('default_home_artists_v2');
             return {
                 tracks: Array.isArray(tracks) ? tracks : [],
                 albums: Array.isArray(albums) ? albums : [],
@@ -913,9 +913,9 @@ export class MusicDatabase {
     }
 
     async saveDefaultHomeContent(data) {
-        if (data.tracks?.length) await this.saveSetting('default_home_tracks', data.tracks);
-        if (data.albums?.length) await this.saveSetting('default_home_albums', data.albums);
-        if (data.artists?.length) await this.saveSetting('default_home_artists', data.artists);
+        if (data.tracks?.length) await this.saveSetting('default_home_tracks_v2', data.tracks);
+        if (data.albums?.length) await this.saveSetting('default_home_albums_v2', data.albums);
+        if (data.artists?.length) await this.saveSetting('default_home_artists_v2', data.artists);
     }
 }
 

@@ -6,11 +6,36 @@ import {
     getYouTubeTrack,
     getYouTubeStream,
     getYouTubeRelatedTracks,
+    getYouTubeStreamByIndex,
     clearYouTubeStreamCache,
 } from './youtube-handler.mjs';
 
 const PORT = Number(process.env.YOUTUBE_API_PORT || 8787);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+
+// Full rotation order: proven clients first, then exotic
+// Must match the order in youtube-handler.mjs's resolveYouTubeStream
+const CLIENT_ROTATION = [
+    'YTMUSIC',
+    'IOS',
+    'ANDROID',
+    'ANDROID_VR',
+    'TV_EMBEDDED',
+    'YTMUSIC_ANDROID',
+    'TV',
+    'TV_SIMPLY',
+    'MWEB',
+    'WEB_EMBEDDED',
+    'WEB',
+    'WEB_CREATOR',
+];
+
+// Exponential backoff delays (ms)
+const BACKOFF_DELAYS = [1000, 2000, 4000, 8000, 15000, 30000];
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function corsHeaders(extra = {}) {
     return {
@@ -30,20 +55,34 @@ function sendJson(res, status, data) {
     res.end(JSON.stringify(data));
 }
 
-async function openUpstreamStream(videoId, req, abort) {
-    const stream = await getYouTubeStream(videoId);
+async function openUpstreamStream(videoId, req, abort, clientIndex = 0, rangeHeader = null) {
+    const stream = clientIndex > 0
+        ? await getYouTubeStream(videoId, CLIENT_ROTATION[clientIndex % CLIENT_ROTATION.length])
+        : await getYouTubeStream(videoId);
+
     if (stream.error) return { stream, upstream: null };
 
     const upstreamHeaders = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         Accept: '*/*',
-        Range: req.headers.range || 'bytes=0-',
+        Origin: 'https://music.youtube.com',
+        Referer: 'https://music.youtube.com/',
+        'Accept-Language': 'en-US,en;q=0.9',
     };
+
+    if (rangeHeader) {
+        upstreamHeaders.Range = rangeHeader;
+    }
 
     const upstream = await fetch(stream.url, { headers: upstreamHeaders, signal: abort.signal });
     return { stream, upstream };
 }
 
+// Per-error-type recovery — Echo Music inspired
+// 403 → expired URL, clear cache and rotate client
+// 416 → range not satisfiable, drop range and retry
+// 404/410 → not found/gone, clear cache and try next client
+// Network errors → exponential backoff
 async function proxyAudioPlayback(videoId, req, res) {
     const abort = new AbortController();
     const onClose = () => abort.abort();
@@ -51,12 +90,81 @@ async function proxyAudioPlayback(videoId, req, res) {
 
     let stream;
     let upstream;
-    try {
-        ({ stream, upstream } = await openUpstreamStream(videoId, req, abort));
+    let clientIndex = 0;
+    let rangeHeader = req.headers.range || 'bytes=0-';
+    let backoffAttempt = 0;
+    let lastError = null;
 
-        if ((!upstream?.ok || !upstream?.body) && upstream?.status && [403, 404, 410, 416].includes(upstream.status)) {
+    const tryWithRotation = async () => {
+        try {
+            ({ stream, upstream } = await openUpstreamStream(videoId, req, abort, clientIndex, rangeHeader));
+            lastError = null;
+            return true;
+        } catch (err) {
+            lastError = err;
+            return false;
+        }
+    };
+
+    try {
+        let ok = await tryWithRotation();
+
+        while (!ok || !upstream?.ok || !upstream?.body) {
+            const status = upstream?.status;
+            const isHttpError = status && status >= 400;
+
+            if (!ok && !isHttpError) {
+                // Network/connection error — exponential backoff
+                if (backoffAttempt < BACKOFF_DELAYS.length) {
+                    const delay = BACKOFF_DELAYS[backoffAttempt];
+                    backoffAttempt++;
+                    console.warn(`[YT Proxy] ${videoId} network error (attempt ${backoffAttempt}), backing off ${delay}ms`);
+                    await sleep(delay);
+                    if (abort.signal.aborted) return;
+                    ok = await tryWithRotation();
+                    continue;
+                }
+                break;
+            }
+
+            // 416 Range Not Satisfiable — clear cache, drop Range, retry with same client
+            if (status === 416) {
+                console.warn(`[YT Proxy] ${videoId} returned 416 (range not satisfiable), dropping range header`);
+                clearYouTubeStreamCache(videoId);
+                rangeHeader = null;
+                ok = await tryWithRotation();
+                continue;
+            }
+
+            // 403/404/410 — clear cache, rotate to next client
+            if (isHttpError && [403, 404, 410].includes(status)) {
+                if (clientIndex < CLIENT_ROTATION.length - 1) {
+                    clearYouTubeStreamCache(videoId);
+                    clientIndex++;
+                    backoffAttempt = 0;
+                    const clientName = CLIENT_ROTATION[clientIndex % CLIENT_ROTATION.length];
+                    console.warn(`[YT Proxy] ${videoId} returned ${status}, rotating to ${clientName} (client ${clientIndex + 1}/${CLIENT_ROTATION.length})`);
+                    ok = await tryWithRotation();
+                    continue;
+                }
+                break;
+            }
+
+            // Any other error — break
+            break;
+        }
+
+        // If we exhausted rotation and still have errors, try a brief backoff + retry from start
+        if ((!ok || !upstream?.ok || !upstream?.body) && backoffAttempt < 3) {
+            backoffAttempt++;
+            const delay = BACKOFF_DELAYS[Math.min(backoffAttempt, BACKOFF_DELAYS.length - 1)];
+            console.warn(`[YT Proxy] ${videoId} exhausted clients, final backoff ${delay}ms (attempt ${backoffAttempt})`);
+            await sleep(delay);
+            if (abort.signal.aborted) return;
+            clientIndex = 0;
+            rangeHeader = req.headers.range || 'bytes=0-';
             clearYouTubeStreamCache(videoId);
-            ({ stream, upstream } = await openUpstreamStream(videoId, req, abort));
+            ok = await tryWithRotation();
         }
     } catch (err) {
         req.off('close', onClose);
@@ -74,7 +182,10 @@ async function proxyAudioPlayback(videoId, req, res) {
     if (!upstream?.ok || !upstream.body) {
         req.off('close', onClose);
         if (!res.headersSent) {
-            sendJson(res, upstream?.status || 502, { error: `upstream ${upstream?.status || 'fetch failed'}` });
+            const errMsg = lastError
+                ? `upstream failed: ${lastError.message}`
+                : `upstream ${upstream?.status || 'fetch failed'}`;
+            sendJson(res, upstream?.status || 502, { error: errMsg });
         }
         return;
     }

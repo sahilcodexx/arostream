@@ -22,13 +22,23 @@ function mimeFromStreamUrl(url) {
     return 'audio/mp4';
 }
 
-const PIPED_INSTANCES = ['https://api.piped.private.coffee'];
-const STREAM_CACHE_TTL_MS = 30 * 60 * 1000;
+const PIPED_INSTANCES = [
+    'https://api.piped.private.coffee',
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.tokhmi.xyz',
+    'https://pipedapi.smnz.de',
+];
+
+const STREAM_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const streamCache = new Map();
 const streamInflight = new Map();
 
-let innertubePromise = null;
+let innertubeInstance = null;
+
+// Track visitor data for guest session rotation (BotDetection mitigation)
+let currentVisitorData = null;
+const VISITOR_ROTATION_CLIENTS = ['YTMUSIC', 'ANDROID', 'ANDROID_VR'];
 
 function getCachedStream(videoId) {
     const entry = streamCache.get(videoId);
@@ -50,10 +60,32 @@ function cacheStream(videoId, stream) {
 }
 
 async function getInnertube() {
-    if (!innertubePromise) {
-        innertubePromise = Innertube.create({ generate_session_locally: true });
+    if (!innertubeInstance) {
+        innertubeInstance = Innertube.create({
+            generate_session_locally: true,
+            client_type: 'YTMUSIC',
+        });
     }
-    return innertubePromise;
+    const yt = await innertubeInstance;
+    return yt;
+}
+
+// Rotate guest session visitor data to mitigate bot detection
+async function rotateGuestSession() {
+    try {
+        const client = VISITOR_ROTATION_CLIENTS[Math.floor(Math.random() * VISITOR_ROTATION_CLIENTS.length)];
+        const newSession = await Innertube.create({
+            generate_session_locally: true,
+            client_type: client,
+        });
+        innertubeInstance = newSession;
+        currentVisitorData = newSession.session?.visitor_data || null;
+        console.warn(`[YouTube Handler] Rotated guest session (client: ${client})`);
+        return newSession;
+    } catch (err) {
+        console.warn('[YouTube Handler] Guest session rotation failed:', err.message);
+        return innertubeInstance;
+    }
 }
 
 function withTimeout(promise, ms, message) {
@@ -391,6 +423,69 @@ export async function getYouTubeTrack(videoId) {
     });
 }
 
+// --- Stream resolution ---
+// Two-phase client rotation:
+// Phase 1 (fast): proven clients that work with YouTube Music streams.
+// Phase 2 (slow): exotic clients tried only after Piped/yt-dlp also fail.
+// This avoids 10+ seconds of 400 errors before falling through to rescue methods.
+
+const PROVEN_CLIENTS = [
+    'YTMUSIC',           // YouTube Music — best for music content
+    'IOS',               // iOS — great audio stream support
+    'ANDROID',           // Android — broad compatibility
+    'ANDROID_VR',        // Android VR — different fingerprint, bypasses some restrictions
+];
+
+const EXOTIC_CLIENTS = [
+    'TV_EMBEDDED',       // TVHTML5 Simply Embedded — good for restricted content
+    'YTMUSIC_ANDROID',   // YouTube Music Android variant
+    'TV',                // TVHTML5
+    'TV_SIMPLY',         // TVHTML5 Simply
+    'MWEB',              // Mobile web
+    'WEB_EMBEDDED',      // Web embedded player
+    'WEB',               // Desktop web
+    'WEB_CREATOR',       // Creator studio client
+];
+
+async function getStreamViaInnertube(videoId, clientType) {
+    try {
+        const yt = await getInnertube();
+        // Use getBasicInfo instead of getInfo — only hits /player endpoint,
+        // avoids the /next endpoint that returns 400 for many client types.
+        // For stream resolution we only need the player response.
+        const info = await withTimeout(
+            yt.getBasicInfo(videoId, { client: clientType }),
+            10000,
+            `Innertube (${clientType}) stream timed out`
+        );
+        const format = info.chooseFormat({ type: 'audio', quality: 'best' });
+        if (!format?.url) return null;
+
+        return { url: format.url, mimeType: format.mime_type || 'audio/mp4', source: `innertube-${clientType}` };
+    } catch (err) {
+        console.warn(`Innertube (${clientType}) stream failed for ${videoId}:`, err.message);
+        return null;
+    }
+}
+
+async function getStreamViaPiped(videoId) {
+    for (const base of PIPED_INSTANCES) {
+        try {
+            const res = await fetch(`${base}/streams/${videoId}`, { signal: AbortSignal.timeout(10000) });
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (data.error || !data.audioStreams?.length) continue;
+            const stream = data.audioStreams
+                .filter((s) => s.mimeType?.startsWith('audio/') && s.url)
+                .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+            if (stream?.url) return { url: stream.url, mimeType: stream.mimeType, source: 'piped' };
+        } catch {
+            continue;
+        }
+    }
+    return null;
+}
+
 async function getStreamViaYtdlp(videoId) {
     try {
         const ytdlp = resolveYtdlpPath();
@@ -412,51 +507,67 @@ async function getStreamViaYtdlp(videoId) {
     }
 }
 
-async function getStreamViaInnertube(videoId) {
-    try {
-        const yt = await getInnertube();
-        const info = await withTimeout(yt.getInfo(videoId, { client: 'IOS' }), 15000, 'Innertube stream timed out');
-        const format = info.chooseFormat({ type: 'audio', quality: 'best' });
-        if (!format?.url) return null;
-        return { url: format.url, mimeType: format.mime_type || 'audio/mp4', source: 'innertube' };
-    } catch (err) {
-        console.warn('Innertube stream failed:', err.message);
-        return null;
-    }
-}
-
-async function getStreamViaPiped(videoId) {
-    for (const base of PIPED_INSTANCES) {
-        try {
-            const res = await fetch(`${base}/streams/${videoId}`, { signal: AbortSignal.timeout(10000) });
-            if (!res.ok) continue;
-            const data = await res.json();
-            if (data.error || !data.audioStreams?.length) continue;
-            const stream = data.audioStreams
-                .filter((s) => s.mimeType?.startsWith('audio/') && s.url)
-                .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-            if (stream?.url) return { url: stream.url, mimeType: stream.mimeType };
-        } catch {
-            continue;
-        }
-    }
-    return null;
-}
-
-async function resolveYouTubeStream(videoId) {
+async function resolveYouTubeStream(videoId, attempt = 1) {
     const cached = getCachedStream(videoId);
     if (cached) return cached;
 
-    let stream = await getStreamViaYtdlp(videoId);
-    if (!stream) stream = await getStreamViaInnertube(videoId);
-    if (!stream) stream = await getStreamViaPiped(videoId);
-    if (!stream) return { error: 'No playable YouTube stream found', retryable: true };
+    // Phase 1: Proven clients only (fast)
+    for (const clientType of PROVEN_CLIENTS) {
+        const stream = await getStreamViaInnertube(videoId, clientType);
+        if (stream) {
+            cacheStream(videoId, stream);
+            return stream;
+        }
+    }
 
-    cacheStream(videoId, stream);
-    return stream;
+    // Phase 2: Piped and yt-dlp rescue (fastest fallback)
+    const pipedStream = await getStreamViaPiped(videoId);
+    if (pipedStream) {
+        cacheStream(videoId, pipedStream);
+        return pipedStream;
+    }
+
+    const ytdlpStream = await getStreamViaYtdlp(videoId);
+    if (ytdlpStream) {
+        cacheStream(videoId, ytdlpStream);
+        return ytdlpStream;
+    }
+
+    // Phase 3: Exotic clients (only if everything above failed)
+    // These are slower / may 400, but worth trying before giving up
+    for (const clientType of EXOTIC_CLIENTS) {
+        const stream = await getStreamViaInnertube(videoId, clientType);
+        if (stream) {
+            cacheStream(videoId, stream);
+            return stream;
+        }
+    }
+
+    // Last resort: rotate guest session and retry once
+    if (attempt < 2) {
+        console.warn(`[YT Handler] ${videoId} all streams failed, rotating guest session (attempt ${attempt})...`);
+        await rotateGuestSession();
+        return resolveYouTubeStream(videoId, attempt + 1);
+    }
+
+    return { error: 'No playable YouTube stream found', retryable: true };
 }
 
-export async function getYouTubeStream(videoId) {
+/**
+ * Resolve a YouTube stream URL, with explicit retry for transient failures.
+ * On 403/blocked, it clears the cache and tries again with a different client.
+ */
+export async function getYouTubeStream(videoId, forceClientType = null) {
+    if (forceClientType) {
+        clearYouTubeStreamCache(videoId);
+        const stream = await getStreamViaInnertube(videoId, forceClientType);
+        if (stream) {
+            cacheStream(videoId, stream);
+            return stream;
+        }
+        return { error: 'No playable YouTube stream found', retryable: true };
+    }
+
     const cached = getCachedStream(videoId);
     if (cached) return cached;
 
@@ -469,4 +580,21 @@ export async function getYouTubeStream(videoId) {
     });
     streamInflight.set(videoId, promise);
     return promise;
+}
+
+/**
+ * Get a YouTube stream using the n-th client in the rotation list.
+ * Used by the proxy for client rotation on 403 errors.
+ * Index 0-3 are proven clients, 4+ are exotic.
+ */
+export async function getYouTubeStreamByIndex(videoId, clientIndex) {
+    const allClients = [...PROVEN_CLIENTS, ...EXOTIC_CLIENTS];
+    const clientType = allClients[clientIndex % allClients.length];
+    clearYouTubeStreamCache(videoId);
+    const stream = await getStreamViaInnertube(videoId, clientType);
+    if (stream) {
+        cacheStream(videoId, stream);
+        return stream;
+    }
+    return { error: 'No playable YouTube stream found', retryable: true };
 }
