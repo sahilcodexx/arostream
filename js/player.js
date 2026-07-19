@@ -639,19 +639,13 @@ export class Player {
         // Warm connection and pre-fetch
         if (!streamUrl.startsWith('blob:')) {
             if (streamUrl.includes('.mpd') || streamUrl.includes('.m3u8')) {
-                if (
-                    this.shakaInitialized &&
-                    this.shakaPlayer &&
-                    typeof this.shakaPlayer.preload === 'function'
-                ) {
+                if (this.shakaInitialized && this.shakaPlayer && typeof this.shakaPlayer.preload === 'function') {
                     try {
                         let preloadConfig = undefined;
                         if (typeof this.shakaPlayer.getConfiguration === 'function') {
                             preloadConfig = this.shakaPlayer.getConfiguration();
                             const stats =
-                                typeof this.shakaPlayer.getStats === 'function'
-                                    ? this.shakaPlayer.getStats()
-                                    : null;
+                                typeof this.shakaPlayer.getStats === 'function' ? this.shakaPlayer.getStats() : null;
                             if (stats && stats.estimatedBandwidth) {
                                 preloadConfig.abr.defaultBandwidthEstimate = stats.estimatedBandwidth;
                             }
@@ -668,20 +662,13 @@ export class Player {
                                 }
                             } catch (_e) {}
                         }
-                        const preloadManager = await this.shakaPlayer.preload(
-                            streamUrl,
-                            null,
-                            null,
-                            preloadConfig
-                        );
+                        const preloadManager = await this.shakaPlayer.preload(streamUrl, null, null, preloadConfig);
                         streamInfo.preloadManager = preloadManager;
                     } catch (_e) {
                         // Ignore preload errors, will just load fresh
                     }
                 } else {
-                    fetch(streamUrl, { method: 'GET', signal: this.preloadAbortController.signal }).catch(
-                        () => {}
-                    );
+                    fetch(streamUrl, { method: 'GET', signal: this.preloadAbortController.signal }).catch(() => {});
                 }
             } else {
                 const preloader = new Audio();
@@ -721,7 +708,8 @@ export class Player {
                 const isPodcast = track.isPodcast || (track.id && String(track.id).startsWith('podcast_'));
                 if (track.isLocal || isTracker || isPodcast || (track.audioUrl && !track.isLocal)) continue;
 
-                this.api.getStreamUrl(track.id, this.quality)
+                this.api
+                    .getStreamUrl(track.id, this.quality)
                     .then((streamInfo) => {
                         if (!signal.aborted && !this.preloadCache.has(track.id) && streamInfo?.url) {
                             this.preloadCache.set(track.id, streamInfo);

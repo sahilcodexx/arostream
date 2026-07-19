@@ -56,9 +56,10 @@ function sendJson(res, status, data) {
 }
 
 async function openUpstreamStream(videoId, req, abort, clientIndex = 0, rangeHeader = null) {
-    const stream = clientIndex > 0
-        ? await getYouTubeStream(videoId, CLIENT_ROTATION[clientIndex % CLIENT_ROTATION.length])
-        : await getYouTubeStream(videoId);
+    const stream =
+        clientIndex > 0
+            ? await getYouTubeStream(videoId, CLIENT_ROTATION[clientIndex % CLIENT_ROTATION.length])
+            : await getYouTubeStream(videoId);
 
     if (stream.error) return { stream, upstream: null };
 
@@ -118,7 +119,9 @@ async function proxyAudioPlayback(videoId, req, res) {
                 if (backoffAttempt < BACKOFF_DELAYS.length) {
                     const delay = BACKOFF_DELAYS[backoffAttempt];
                     backoffAttempt++;
-                    console.warn(`[YT Proxy] ${videoId} network error (attempt ${backoffAttempt}), backing off ${delay}ms`);
+                    console.warn(
+                        `[YT Proxy] ${videoId} network error (attempt ${backoffAttempt}), backing off ${delay}ms`
+                    );
                     await sleep(delay);
                     if (abort.signal.aborted) return;
                     ok = await tryWithRotation();
@@ -143,7 +146,9 @@ async function proxyAudioPlayback(videoId, req, res) {
                     clientIndex++;
                     backoffAttempt = 0;
                     const clientName = CLIENT_ROTATION[clientIndex % CLIENT_ROTATION.length];
-                    console.warn(`[YT Proxy] ${videoId} returned ${status}, rotating to ${clientName} (client ${clientIndex + 1}/${CLIENT_ROTATION.length})`);
+                    console.warn(
+                        `[YT Proxy] ${videoId} returned ${status}, rotating to ${clientName} (client ${clientIndex + 1}/${CLIENT_ROTATION.length})`
+                    );
                     ok = await tryWithRotation();
                     continue;
                 }
@@ -158,7 +163,9 @@ async function proxyAudioPlayback(videoId, req, res) {
         if ((!ok || !upstream?.ok || !upstream?.body) && backoffAttempt < 3) {
             backoffAttempt++;
             const delay = BACKOFF_DELAYS[Math.min(backoffAttempt, BACKOFF_DELAYS.length - 1)];
-            console.warn(`[YT Proxy] ${videoId} exhausted clients, final backoff ${delay}ms (attempt ${backoffAttempt})`);
+            console.warn(
+                `[YT Proxy] ${videoId} exhausted clients, final backoff ${delay}ms (attempt ${backoffAttempt})`
+            );
             await sleep(delay);
             if (abort.signal.aborted) return;
             clientIndex = 0;

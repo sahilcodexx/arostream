@@ -430,21 +430,21 @@ export async function getYouTubeTrack(videoId) {
 // This avoids 10+ seconds of 400 errors before falling through to rescue methods.
 
 const PROVEN_CLIENTS = [
-    'YTMUSIC',           // YouTube Music — best for music content
-    'IOS',               // iOS — great audio stream support
-    'ANDROID',           // Android — broad compatibility
-    'ANDROID_VR',        // Android VR — different fingerprint, bypasses some restrictions
+    'YTMUSIC', // YouTube Music — best for music content
+    'IOS', // iOS — great audio stream support
+    'ANDROID', // Android — broad compatibility
+    'ANDROID_VR', // Android VR — different fingerprint, bypasses some restrictions
 ];
 
 const EXOTIC_CLIENTS = [
-    'TV_EMBEDDED',       // TVHTML5 Simply Embedded — good for restricted content
-    'YTMUSIC_ANDROID',   // YouTube Music Android variant
-    'TV',                // TVHTML5
-    'TV_SIMPLY',         // TVHTML5 Simply
-    'MWEB',              // Mobile web
-    'WEB_EMBEDDED',      // Web embedded player
-    'WEB',               // Desktop web
-    'WEB_CREATOR',       // Creator studio client
+    'TV_EMBEDDED', // TVHTML5 Simply Embedded — good for restricted content
+    'YTMUSIC_ANDROID', // YouTube Music Android variant
+    'TV', // TVHTML5
+    'TV_SIMPLY', // TVHTML5 Simply
+    'MWEB', // Mobile web
+    'WEB_EMBEDDED', // Web embedded player
+    'WEB', // Desktop web
+    'WEB_CREATOR', // Creator studio client
 ];
 
 async function getStreamViaInnertube(videoId, clientType) {

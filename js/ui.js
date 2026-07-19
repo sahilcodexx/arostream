@@ -4346,16 +4346,34 @@ export class UIRenderer {
 
     async fetchAndCacheDefaultContent() {
         const trackQueries = [
-            'Karan Aujla', 'Bollywood hits 2025', 'Pop hits 2025', 'Punjabi music',
-            'Hindi pop', 'English pop', 'Party songs', 'Chill vibes',
+            'Karan Aujla',
+            'Bollywood hits 2025',
+            'Pop hits 2025',
+            'Punjabi music',
+            'Hindi pop',
+            'English pop',
+            'Party songs',
+            'Chill vibes',
         ];
         const albumQueries = [
-            'Pop albums', 'Rock albums', 'Bollywood albums', 'Indie albums',
-            'Hip hop albums', 'Electronic albums', 'Top albums 2025', 'Top albums 2024',
+            'Pop albums',
+            'Rock albums',
+            'Bollywood albums',
+            'Indie albums',
+            'Hip hop albums',
+            'Electronic albums',
+            'Top albums 2025',
+            'Top albums 2024',
         ];
         const artistQueries = [
-            'Karan Aujla', 'Taylor Swift', 'Arijit Singh', 'The Weeknd',
-            'Diljit Dosanjh', 'Billie Eilish', 'A R Rahman', 'Ed Sheeran',
+            'Karan Aujla',
+            'Taylor Swift',
+            'Arijit Singh',
+            'The Weeknd',
+            'Diljit Dosanjh',
+            'Billie Eilish',
+            'A R Rahman',
+            'Ed Sheeran',
         ];
 
         try {
